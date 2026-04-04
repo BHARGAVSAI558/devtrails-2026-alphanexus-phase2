@@ -1,0 +1,17 @@
+safenet_v2/backend/.env
+safenet_v2/backend/*.db
+safenet_v2/backend/__pycache__/
+safenet_v2/backend/**/__pycache__/
+safenet_v2/backend/**/*.pyc
+safenet_v2/backend/.venv/
+safenet_v2/backend/ml_models/*.pkl
+
+SafeNetFresh/node_modules/
+SafeNetFresh/.expo/
+SafeNetFresh/dist/
+
+safenet_v2/admin/node_modules/
+safenet_v2/admin/dist/
+
+.DS_Store
+Thumbs.db
