@@ -5,14 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
   Pressable,
+  Platform,
   Animated,
   useColorScheme,
   RefreshControl,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import AppModal from '../components/AppModal';
 import { policies, zones as zonesApi } from '../services/api';
 import { usePolicy } from '../contexts/PolicyContext';
 import { useWorkerProfile } from '../hooks/useWorkerProfile';
@@ -213,6 +214,7 @@ export default function PolicyScreen() {
   const currentTierCanon = canonicalTierLabel(p?.tier);
 
   return (
+    <View style={[styles.screenWrap, Platform.OS === 'web' && styles.screenWrapWeb]}>
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bg }]}
       contentContainerStyle={styles.content}
@@ -314,8 +316,9 @@ export default function PolicyScreen() {
           <Text style={styles.ctaText}>Activate Coverage</Text>
         </TouchableOpacity>
       ) : null}
+    </ScrollView>
 
-      <Modal visible={sheetOpen} animationType="slide" transparent onRequestClose={() => setSheetOpen(false)}>
+      <AppModal visible={sheetOpen} animationType="slide" transparent onRequestClose={() => setSheetOpen(false)}>
         <Pressable style={styles.sheetOverlay} onPress={() => !activateMutation.isPending && setSheetOpen(false)}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.sheetTitle}>{isCovered ? 'Switch plan' : 'Choose your plan'}</Text>
@@ -359,12 +362,14 @@ export default function PolicyScreen() {
             </TouchableOpacity>
           </Pressable>
         </Pressable>
-      </Modal>
-    </ScrollView>
+      </AppModal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenWrap: { flex: 1 },
+  screenWrapWeb: { position: 'relative' },
   container: { flex: 1 },
   content: { padding: 20, paddingBottom: 48 },
   title: { fontSize: 22, fontWeight: '800', marginBottom: 16 },

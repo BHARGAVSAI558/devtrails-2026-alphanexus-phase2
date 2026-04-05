@@ -227,9 +227,11 @@ export default function OTPVerifyScreen({ navigation, route }) {
             setDigits(next);
           }}
           editable={!loading}
-          placeholder="000000"
-          placeholderTextColor="#cbd5e1"
           autoComplete="one-time-code"
+          autoCorrect={false}
+          autoCapitalize="none"
+          spellCheck={false}
+          nativeID="safenet-otp"
           autoFocus
         />
       ) : (
@@ -327,18 +329,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   webOtpInput: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 280,
     borderWidth: 2,
     borderColor: '#e5e7eb',
     borderRadius: 14,
     paddingVertical: 16,
-    paddingHorizontal: 18,
-    fontSize: 28,
+    paddingHorizontal: 12,
+    fontSize: 24,
     fontWeight: '800',
-    letterSpacing: 12,
+    letterSpacing: 8,
     textAlign: 'center',
     color: '#111827',
     backgroundColor: '#fff',
     marginTop: 4,
+    fontFamily: Platform.select({ web: 'SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace', default: undefined }),
   },
   boxFilled: { borderColor: BRAND, backgroundColor: '#eff6ff' },
   btn: {

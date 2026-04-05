@@ -3,7 +3,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { View, ActivityIndicator, Text, Platform } from 'react-native';
+import { View, ActivityIndicator, Text, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -116,16 +116,26 @@ function ProtectedMainTabs() {
   if (!token || profileReady !== true) return null;
 
   return (
-    <>
+    <View style={[mainTabStyles.shell, Platform.OS === 'web' && mainTabStyles.shellWeb]}>
       <MainTabs />
       <WebSocketBridge />
       <DisruptionModal />
       <PremiumDueModal />
       <LocationGate />
       <PolicyBootstrap />
-    </>
+    </View>
   );
 }
+
+const mainTabStyles = StyleSheet.create({
+  shell: { flex: 1 },
+  shellWeb: { position: 'relative' },
+});
+
+const appGhStyles = StyleSheet.create({
+  flex: { flex: 1 },
+  flexWeb: { position: 'relative' },
+});
 
 function RootNavigator() {
   const { token, isRestored, profileReady } = useAuth();
@@ -209,7 +219,9 @@ function RootNavigator() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView
+        style={[appGhStyles.flex, Platform.OS === 'web' && appGhStyles.flexWeb]}
+      >
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <WsConnectionProvider>

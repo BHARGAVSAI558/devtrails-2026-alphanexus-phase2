@@ -52,15 +52,22 @@ const styles = StyleSheet.create({
   deviceClip: {
     flex: 1,
     width: '100%',
-    overflow: 'hidden',
     borderRadius: 32,
     margin: 5,
     backgroundColor: '#f0f4ff',
+    ...Platform.select({
+      web: { position: 'relative', overflow: 'visible' },
+      default: { overflow: 'hidden' },
+    }),
   },
   fullBleed: {
     flex: 1,
     width: '100%',
     minHeight: '100vh',
     backgroundColor: '#f0f4ff',
+    ...Platform.select({
+      web: { position: 'relative' },
+      default: {},
+    }),
   },
 });

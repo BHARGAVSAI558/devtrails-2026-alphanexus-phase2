@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+
+import AppModal from './AppModal';
 
 import { useClaims } from '../contexts/ClaimContext';
 
@@ -36,7 +38,7 @@ export default function DisruptionModal() {
   }, [visible, countdownSeconds, clearDisruptionAlert]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
+    <AppModal visible={visible} animationType="slide" transparent={false} onRequestClose={clearDisruptionAlert}>
       <View style={styles.container}>
         <Text style={styles.title}>Disruption Alert</Text>
         <Text style={styles.subtitle}>
@@ -47,7 +49,7 @@ export default function DisruptionModal() {
         </Text>
         <Text style={styles.tip}>Stay alert. Your payouts may be affected during this period.</Text>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 

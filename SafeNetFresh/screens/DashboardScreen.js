@@ -9,9 +9,9 @@ import {
   useColorScheme,
   ActivityIndicator,
   Animated,
-  Modal,
   Pressable,
   Alert,
+  Platform,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,6 +25,7 @@ import { useWsConnection } from '../contexts/WsConnectionContext';
 import { usePolicy } from '../contexts/PolicyContext';
 import { useWorkerProfile } from '../hooks/useWorkerProfile';
 import { usePayoutHistory } from '../hooks/usePayoutHistory';
+import AppModal from '../components/AppModal';
 import { logButtonTap, logClaimStatusView } from '../services/device_fingerprint.service';
 import { trustBadge } from '../utils/trustBadge';
 import { canonicalTierLabel } from '../utils/tierDisplay';
@@ -818,7 +819,13 @@ export default function DashboardScreen({ navigation }) {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg, flex: 1 }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.bg, flex: 1 },
+        Platform.OS === 'web' && styles.screenRootWeb,
+      ]}
+    >
       {approvalToast ? (
         <Animated.View
           style={[
@@ -1356,7 +1363,9 @@ export default function DashboardScreen({ navigation }) {
         </View>
       ) : null}
 
-      <Modal
+    </ScrollView>
+
+      <AppModal
         visible={disruptionSheetVisible}
         transparent
         animationType="slide"
@@ -1428,9 +1437,14 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
 
-      <Modal visible={Boolean(payoutCelebration)} transparent animationType="fade" onRequestClose={() => setPayoutCelebration(null)}>
+      <AppModal
+        visible={Boolean(payoutCelebration)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPayoutCelebration(null)}
+      >
         <Pressable style={styles.celebrationBackdrop} onPress={() => setPayoutCelebration(null)}>
           <Pressable style={styles.celebrationInner} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.celebrationAmt}>₹{Math.round(Number(payoutCelebration?.amount || 0))}</Text>
@@ -1449,8 +1463,7 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </Pressable>
         </Pressable>
-      </Modal>
-    </ScrollView>
+      </AppModal>
 
       {dnaTooltip.visible ? (
         <>
@@ -1482,6 +1495,8 @@ export default function DashboardScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  /** Web: in-tree modals position:absolute fill this screen, not the scroll body */
+  screenRootWeb: { position: 'relative' },
   content: { padding: 16, paddingBottom: 64 },
 
   approvalToastOuter: {
@@ -1515,13 +1530,18 @@ const styles = StyleSheet.create({
   headerGradient: {
     borderRadius: 20,
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingTop: 14,
+    paddingBottom: 16,
     marginBottom: 14,
-    maxHeight: 140,
-    overflow: 'hidden',
   },
   headerGreetingLine1: { color: 'rgba(255,255,255,0.92)', fontSize: 16, fontWeight: '700' },
-  headerGreetingLine2: { color: '#fff', fontSize: 26, fontWeight: '900', marginTop: 2 },
+  headerGreetingLine2: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: '900',
+    marginTop: 2,
+    lineHeight: 32,
+  },
 
   forecastShieldCardHero: {
     borderRadius: 20,

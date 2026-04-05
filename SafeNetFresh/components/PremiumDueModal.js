@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+
+import AppModal from './AppModal';
 
 import { useClaims } from '../contexts/ClaimContext';
 
@@ -19,7 +21,7 @@ export default function PremiumDueModal() {
   const body = useMemo(() => premiumDue?.message || 'Please pay your weekly premium to stay protected.', [premiumDue]);
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={false}>
+    <AppModal visible={visible} animationType="fade" transparent={false} onRequestClose={clearPremiumDue}>
       <View style={styles.container}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.body}>{body}</Text>
@@ -27,7 +29,7 @@ export default function PremiumDueModal() {
           <Text style={styles.btnText}>OK</Text>
         </TouchableOpacity>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
