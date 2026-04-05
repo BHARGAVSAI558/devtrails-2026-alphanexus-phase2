@@ -57,7 +57,7 @@ exp://u.expo.dev/safenet
 
 ## 🌐 Try the Admin Dashboard
 
-1. Open [https://devtrails-2026-alphanexus-phase-scale.vercel.app](https://devtrails-2026-alphanexus-phase-scale.vercel.app) (or run `safenet_v2/admin` locally — see [Local development](#local-development)).
+1. Open [https://safenet-admin-wine.vercel.app/login](https://safenet-admin-wine.vercel.app/login) (or run `safenet_v2/admin` locally — see [Local development](#local-development)).
 2. Sign in with **username** `admin` and **password** `admin123` (web admin only; workers still use OTP in the mobile app). Override in production with API env vars `ADMIN_DASHBOARD_USERNAME` / `ADMIN_DASHBOARD_PASSWORD`.
 3. Explore live claims feed, fraud queue, zone heatmap, workers, and simulations.
 
