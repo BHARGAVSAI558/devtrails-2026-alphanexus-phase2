@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 const BRAND = '#1A56DB';
 const SMS_AUTOFILL_MS = 1350;
+
+const isWeb = Platform.OS === 'web';
 
 function randomSixDigitOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -38,8 +40,9 @@ export default function OTPVerifyScreen({ navigation, route }) {
   const inputsRef = useRef([]);
   const demoOtpRef = useRef(randomSixDigitOtp());
 
-  // Simulates carrier / OS SMS autofill: brief delay, then code appears and verifies (demo: any 6-digit code works when backend DEMO_MODE is on).
+  // Simulates SMS autofill on native only. Web has no SMS — timer would overwrite typing and block manual OTP entry.
   useEffect(() => {
+    if (isWeb) return undefined;
     const code = demoOtpRef.current;
     const t = setTimeout(() => {
       if (verifyInFlight.current) return;
@@ -48,7 +51,13 @@ export default function OTPVerifyScreen({ navigation, route }) {
       verifyWithCode(code);
     }, SMS_AUTOFILL_MS);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!isWeb) return undefined;
+    const t = setTimeout(() => inputsRef.current[0]?.focus(), 200);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -129,7 +138,22 @@ export default function OTPVerifyScreen({ navigation, route }) {
   }, [digits, loading, verifyWithCode]);
 
   const onChangeDigit = (text, index) => {
-    const d = text.replace(/\D/g, '').slice(-1);
+    const cleaned = text.replace(/\D/g, '');
+    // Web: paste or IME can send several digits at once into one field
+    if (cleaned.length > 1) {
+      const chars = cleaned.slice(0, 6).split('');
+      setDigits((prev) => {
+        const next = [...prev];
+        for (let j = 0; j < chars.length && index + j < 6; j += 1) {
+          next[index + j] = chars[j];
+        }
+        return next;
+      });
+      const nextFocus = Math.min(index + chars.length, 5);
+      setTimeout(() => inputsRef.current[nextFocus]?.focus(), 0);
+      return;
+    }
+    const d = cleaned.slice(-1);
     setDigits((prev) => {
       const next = [...prev];
       next[index] = d;
@@ -141,7 +165,9 @@ export default function OTPVerifyScreen({ navigation, route }) {
   };
 
   const onKeyPress = (e, index) => {
-    if (e.nativeEvent.key === 'Backspace' && !digits[index] && index > 0) {
+    const key = e?.nativeEvent?.key ?? '';
+    const isBackspace = key === 'Backspace' || key === 'Delete';
+    if (isBackspace && !digits[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }
   };
@@ -155,13 +181,17 @@ export default function OTPVerifyScreen({ navigation, route }) {
       setRemain(60);
       submittedCodeRef.current = null;
       setDigits(['', '', '', '', '', '']);
-      const code = demoOtpRef.current;
-      setTimeout(() => {
-        if (verifyInFlight.current) return;
-        setDigits(code.split(''));
-        submittedCodeRef.current = code;
-        verifyWithCode(code);
-      }, SMS_AUTOFILL_MS);
+      if (!isWeb) {
+        const code = demoOtpRef.current;
+        setTimeout(() => {
+          if (verifyInFlight.current) return;
+          setDigits(code.split(''));
+          submittedCodeRef.current = code;
+          verifyWithCode(code);
+        }, SMS_AUTOFILL_MS);
+      } else {
+        setTimeout(() => inputsRef.current[0]?.focus(), 0);
+      }
     } catch (e) {
       Alert.alert('Error', e?.message || 'Could not resend OTP');
     } finally {
@@ -169,63 +199,101 @@ export default function OTPVerifyScreen({ navigation, route }) {
     }
   };
 
+  const padStyle = [styles.container, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }];
+
+  const formBody = (
+    <>
+      <Text style={styles.kicker}>Verification</Text>
+      <Text style={styles.header}>+91 {phone || '—'}</Text>
+      <Text style={styles.sub}>We sent a 6-digit code to this number</Text>
+      <Text style={styles.subMuted}>
+        {isWeb ? 'Type or paste your 6-digit code below.' : 'Enter it below to continue'}
+      </Text>
+
+      {isWeb ? (
+        <TextInput
+          ref={(el) => {
+            inputsRef.current[0] = el;
+          }}
+          style={styles.webOtpInput}
+          keyboardType="default"
+          inputMode="numeric"
+          maxLength={6}
+          value={digits.join('')}
+          onChangeText={(t) => {
+            const c = t.replace(/\D/g, '').slice(0, 6);
+            const next = ['', '', '', '', '', ''];
+            for (let i = 0; i < c.length; i += 1) next[i] = c[i];
+            setDigits(next);
+          }}
+          editable={!loading}
+          placeholder="000000"
+          placeholderTextColor="#cbd5e1"
+          autoComplete="one-time-code"
+          autoFocus
+        />
+      ) : (
+        <View style={styles.row}>
+          {digits.map((d, i) => (
+            <TextInput
+              key={i}
+              ref={(el) => {
+                inputsRef.current[i] = el;
+              }}
+              style={[styles.box, d ? styles.boxFilled : null]}
+              keyboardType="number-pad"
+              maxLength={1}
+              value={d}
+              onChangeText={(t) => onChangeDigit(t, i)}
+              onKeyPress={(e) => onKeyPress(e, i)}
+              editable={!loading}
+              selectTextOnFocus
+              textContentType="oneTimeCode"
+              autoComplete="sms-otp"
+            />
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.btn, loading && styles.btnDisabled]}
+        onPress={() => verifyWithCode(digits.join(''))}
+        disabled={loading || digits.join('').length !== 6}
+      >
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Verify & Login</Text>}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.resendWrap}
+        onPress={handleResend}
+        disabled={remain > 0 || resending || loading}
+      >
+        {remain > 0 ? (
+          <Text style={styles.resendMuted}>Resend code in {remain}s</Text>
+        ) : (
+          <Text style={styles.resendActive}>{resending ? 'Sending…' : 'Resend code'}</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.back} onPress={() => navigation.replace('Onboarding')} disabled={loading}>
+        <Text style={styles.backText}>Change number</Text>
+      </TouchableOpacity>
+    </>
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={[styles.container, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}>
-          <Text style={styles.kicker}>Verification</Text>
-          <Text style={styles.header}>+91 {phone || '—'}</Text>
-          <Text style={styles.sub}>We sent a 6-digit code to this number</Text>
-          <Text style={styles.subMuted}>Enter it below to continue</Text>
-
-          <View style={styles.row}>
-            {digits.map((d, i) => (
-              <TextInput
-                key={i}
-                ref={(el) => {
-                  inputsRef.current[i] = el;
-                }}
-                style={[styles.box, d ? styles.boxFilled : null]}
-                keyboardType="number-pad"
-                maxLength={1}
-                value={d}
-                onChangeText={(t) => onChangeDigit(t, i)}
-                onKeyPress={(e) => onKeyPress(e, i)}
-                editable={!loading}
-                selectTextOnFocus
-              />
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.btn, loading && styles.btnDisabled]}
-            onPress={() => verifyWithCode(digits.join(''))}
-            disabled={loading || digits.join('').length !== 6}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Verify & Login</Text>}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.resendWrap}
-            onPress={handleResend}
-            disabled={remain > 0 || resending || loading}
-          >
-            {remain > 0 ? (
-              <Text style={styles.resendMuted}>Resend code in {remain}s</Text>
-            ) : (
-              <Text style={styles.resendActive}>{resending ? 'Sending…' : 'Resend code'}</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.back} onPress={() => navigation.replace('Onboarding')} disabled={loading}>
-            <Text style={styles.backText}>Change number</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableWithoutFeedback>
+      {isWeb ? (
+        <View style={padStyle}>{formBody}</View>
+      ) : (
+        <Pressable style={padStyle} onPress={Keyboard.dismiss} accessible={false}>
+          {formBody}
+        </Pressable>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -257,6 +325,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111827',
     backgroundColor: '#fff',
+  },
+  webOtpInput: {
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 12,
+    textAlign: 'center',
+    color: '#111827',
+    backgroundColor: '#fff',
+    marginTop: 4,
   },
   boxFilled: { borderColor: BRAND, backgroundColor: '#eff6ff' },
   btn: {

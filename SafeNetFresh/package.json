@@ -8,11 +8,14 @@
     "android": "expo start --lan --android",
     "ios": "expo start --lan --ios",
     "web": "expo start --web",
+    "export:web": "expo export --platform web",
+    "build:web": "expo export --platform web",
     "android:usb-api": "adb reverse tcp:8000 tcp:8000",
     "windows:firewall-api": "powershell -ExecutionPolicy Bypass -File ./scripts/allow-port-8000-windows.ps1",
     "verify:api": "powershell -ExecutionPolicy Bypass -File ./scripts/verify-local-api.ps1"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~6.1.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.2.2",
@@ -25,6 +28,7 @@
     "expo-application": "~7.0.8",
     "expo-background-fetch": "~14.0.9",
     "expo-battery": "~10.0.8",
+    "expo-build-properties": "~1.0.10",
     "expo-cellular": "~8.0.8",
     "expo-crypto": "~15.0.8",
     "expo-device": "~8.0.10",
@@ -41,16 +45,21 @@
     "expo-task-manager": "~14.0.9",
     "expo-updates": "~29.0.16",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
+    "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1"
   },
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
-    "babel-preset-expo": "^55.0.15"
+    "babel-preset-expo": "~54.0.10"
   }
 }

@@ -18,12 +18,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1A56DB"
-      },
-      "usesCleartextTraffic": true
+      }
     },
     "ios": {
       "bundleIdentifier": "com.alphanexus.safenet",
       "supportsTablet": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png"
     },
     "extra": {
       "BACKEND_URL": "https://safenet-api-y4se.onrender.com",
@@ -34,7 +38,15 @@
       }
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }
