@@ -33,21 +33,29 @@ export default function Login() {
           <article className="rounded-2xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
             <h2 className="text-xl font-semibold text-slate-900">📱 Try the Worker App</h2>
             <p className="mt-2 text-sm text-gray-500">Try the worker experience</p>
-            <div className="mt-4 flex flex-col items-start gap-3">
+            <div className="mt-4 rounded-xl bg-blue-50 p-4 text-center">
+              <h3 className="text-base font-semibold text-blue-900">📱 Mobile App (Recommended)</h3>
+              <div className="mt-3 flex justify-center">
+                <img src="/worker-app-qr.png" alt="Worker app QR code" className="h-[190px] w-[190px] rounded-xl border border-blue-100 bg-white p-2 shadow-sm" />
+              </div>
+              <p className="mt-3 text-sm text-blue-800">Scan with Expo Go</p>
+              <p className="mt-1 text-xs text-blue-700">Best experience: Mobile app</p>
+            </div>
+            <div className="mt-6 border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-semibold text-slate-800">🌐 Web Version</h3>
               <a
                 href={workerAppUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
+                className="mt-3 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
               >
-                🚀 Open Worker App (Web)
+                Open Worker App (Web)
               </a>
-              <img src="/worker-app-qr.png" alt="Worker app QR code" className="h-[150px] w-[150px] rounded-lg border border-slate-200 bg-white p-2" />
-              <p className="text-xs text-slate-500">📱 Scan for Mobile App (Expo)</p>
-              <a href={workerAppUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-600 underline">
-                {workerAppUrl}
-              </a>
-              <p className="text-xs text-gray-500">Best experience: Mobile app</p>
+              <p className="mt-2 text-xs text-gray-500">
+                <a href={workerAppUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+                  {workerAppUrl}
+                </a>
+              </p>
             </div>
           </article>
 

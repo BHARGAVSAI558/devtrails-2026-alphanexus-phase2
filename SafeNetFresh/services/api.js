@@ -70,6 +70,14 @@ export const setUnauthorizedHandler = (handler) => {
   onUnauthorized = handler;
 };
 
+function shouldTreatAsUnauthorized(error) {
+  const status = error?.response?.status;
+  if (status === 401) return true;
+  if (status !== 404) return false;
+  const detail = String(error?.response?.data?.detail || '').toLowerCase();
+  return detail.includes('user not found');
+}
+
 api.interceptors.request.use(async (config) => {
   const token = await getCurrentTokenStore();
   if (token) {
@@ -82,8 +90,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const status = error?.response?.status;
-    if (status === 401) {
+    if (shouldTreatAsUnauthorized(error)) {
       await clearTokenStore();
       if (onUnauthorized) onUnauthorized();
     }
@@ -131,7 +138,8 @@ const unwrap = (res) => res.data;
 /** User-facing message; never surfaces raw axios error objects. */
 export function formatApiError(error) {
   const status = error?.response?.status;
-  if (status === 401) {
+  const detail = String(error?.response?.data?.detail || '').toLowerCase();
+  if (status === 401 || (status === 404 && detail.includes('user not found'))) {
     return 'Your session expired. Please sign in again.';
   }
   if (status === 503 || status === 502 || status === 504) {
@@ -176,6 +184,7 @@ export const gigProfile = {
     try {
       return unwrap(await api.post('/profile', body));
     } catch (e) {
+      if (shouldTreatAsUnauthorized(e)) throw e;
       // Backward compatibility: some deployed backends don't expose /api/v1/profile yet.
       if (e?.response?.status !== 404) throw e;
 
@@ -205,6 +214,7 @@ export const gigProfile = {
           city: body?.city || 'Hyderabad',
         };
       } catch (createErr) {
+        if (shouldTreatAsUnauthorized(createErr)) throw createErr;
         const detail = String(createErr?.response?.data?.detail || '');
         if (createErr?.response?.status === 400 && detail.toLowerCase().includes('already exists')) {
           const updated = unwrap(
