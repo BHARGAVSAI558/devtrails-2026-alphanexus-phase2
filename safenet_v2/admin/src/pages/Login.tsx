@@ -78,7 +78,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <section className="w-full bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 px-6 py-14 text-center text-white shadow-lg">
+      <section className="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-16 text-center text-white shadow-lg">
         <div className="mx-auto max-w-5xl">
           <img src="/favicon.svg" alt="SafeNet logo" className="mx-auto h-14 w-14 rounded-xl bg-white/15 p-1.5" />
           <h1 className="mt-5 text-3xl font-extrabold leading-tight md:text-5xl">SafeNet - AI Income Protection for Gig Workers</h1>
@@ -93,9 +93,9 @@ export default function Login() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <section className="grid gap-6 md:grid-cols-2">
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+      <main className="py-10">
+        <section className="mx-auto grid max-w-6xl gap-6 px-4 md:grid-cols-2">
+          <article className="rounded-2xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
             <h2 className="text-2xl font-bold text-slate-900">📱 Try the Worker App</h2>
             <p className="mt-2 text-sm text-slate-600">Experience SafeNet as a Zomato delivery partner</p>
             <div className="mt-4 flex flex-col items-start gap-3">
@@ -117,10 +117,10 @@ export default function Login() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+          <article className="rounded-2xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
             <h2 className="text-2xl font-bold text-slate-900">🖥️ Admin Dashboard</h2>
             <p className="mt-2 text-sm text-slate-600">Monitor claims, fraud rings, and zone analytics in real time</p>
-            <div className="mt-4 rounded-xl bg-slate-100 p-4 text-sm text-slate-700">
+            <div className="mt-4 rounded bg-gray-100 p-3 text-sm text-slate-700">
               <p>
                 Username: <span className="font-mono font-semibold">admin</span>
               </p>
@@ -131,7 +131,7 @@ export default function Login() {
             <button
               type="button"
               onClick={revealLoginSection}
-              className="mt-4 inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+              className="mt-4 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
             >
               Sign in as Admin →
             </button>
@@ -139,7 +139,7 @@ export default function Login() {
           </article>
         </section>
 
-        <section className="mt-10 grid gap-4 md:grid-cols-3">
+        <section className="mx-auto mt-10 grid max-w-6xl gap-4 px-4 md:grid-cols-3">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-base font-bold text-slate-900">Earnings DNA</h3>
             <p className="mt-2 text-sm text-slate-600">Learns each worker’s 7x24 earning fingerprint to estimate protected income windows.</p>
@@ -154,7 +154,7 @@ export default function Login() {
           </div>
         </section>
 
-        <section ref={loginSectionRef} className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section ref={loginSectionRef} className="mx-auto mt-10 max-w-6xl rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
           <button
             type="button"
             onClick={() => setShowAdminLogin((v) => !v)}
