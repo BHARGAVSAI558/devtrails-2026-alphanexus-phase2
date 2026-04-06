@@ -18,7 +18,7 @@ import { auth, workers } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const BRAND = '#1A56DB';
-const SMS_AUTOFILL_MS = 1350;
+const SMS_AUTOFILL_MS = 3500;
 
 const isWeb = Platform.OS === 'web';
 
@@ -39,13 +39,17 @@ export default function OTPVerifyScreen({ navigation, route }) {
   const verifyInFlight = useRef(false);
   const inputsRef = useRef([]);
   const demoOtpRef = useRef(randomSixDigitOtp());
+  const digitsRef = useRef('');
 
-  // Simulates SMS autofill on native only. Web has no SMS — timer would overwrite typing and block manual OTP entry.
   useEffect(() => {
-    if (isWeb) return undefined;
+    digitsRef.current = digits.join('');
+  }, [digits]);
+
+  // Demo behavior: auto-fill OTP after a short delay unless the user has already started typing.
+  useEffect(() => {
     const code = demoOtpRef.current;
     const t = setTimeout(() => {
-      if (verifyInFlight.current) return;
+      if (verifyInFlight.current || digitsRef.current.length > 0) return;
       setDigits(code.split(''));
       submittedCodeRef.current = code;
       verifyWithCode(code);
@@ -181,17 +185,14 @@ export default function OTPVerifyScreen({ navigation, route }) {
       setRemain(60);
       submittedCodeRef.current = null;
       setDigits(['', '', '', '', '', '']);
-      if (!isWeb) {
-        const code = demoOtpRef.current;
-        setTimeout(() => {
-          if (verifyInFlight.current) return;
-          setDigits(code.split(''));
-          submittedCodeRef.current = code;
-          verifyWithCode(code);
-        }, SMS_AUTOFILL_MS);
-      } else {
-        setTimeout(() => inputsRef.current[0]?.focus(), 0);
-      }
+      const code = demoOtpRef.current;
+      setTimeout(() => {
+        if (verifyInFlight.current || digitsRef.current.length > 0) return;
+        setDigits(code.split(''));
+        submittedCodeRef.current = code;
+        verifyWithCode(code);
+      }, SMS_AUTOFILL_MS);
+      if (isWeb) setTimeout(() => inputsRef.current[0]?.focus(), 0);
     } catch (e) {
       Alert.alert('Error', e?.message || 'Could not resend OTP');
     } finally {
@@ -207,7 +208,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
       <Text style={styles.header}>+91 {phone || '—'}</Text>
       <Text style={styles.sub}>We sent a 6-digit code to this number</Text>
       <Text style={styles.subMuted}>
-        {isWeb ? 'Type or paste your 6-digit code below.' : 'Enter it below to continue'}
+        {isWeb ? 'Auto-fills in 3-4 seconds, or type/paste your 6-digit code now.' : 'Auto-fills in 3-4 seconds, or enter it below.'}
       </Text>
 
       {isWeb ? (

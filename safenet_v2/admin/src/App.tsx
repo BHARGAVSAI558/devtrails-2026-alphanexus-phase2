@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import AdminLogin from './pages/AdminLogin';
 import { useAuthStore } from './stores/auth';
 
 const queryClient = new QueryClient({
@@ -88,6 +89,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
           <Route
             path="/"
             element={
