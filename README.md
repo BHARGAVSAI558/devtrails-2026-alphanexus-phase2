@@ -16,6 +16,17 @@
 
 ---
 
+## 🆕 Latest Updates (Apr 2026)
+
+- **Assistant localization (EN/HI/TE):** Added in-app language switch (`🌐`) in support chat for English, Hindi, and Telugu quick queries and responses.
+- **Smarter support routing:** Predefined assistant queries now get mapped responses; only custom user-typed queries are sent to admin support queue.
+- **Earnings DNA simplified:** Reduced to quick snapshot format (live status, heatmap, next peak, today potential, and week progress) for 2–3 second readability.
+- **Payout realism improved:** Demo flow now follows a realistic cadence (e.g., 2 paid runs then 1 no-disruption) with deterministic payout values instead of random jumps.
+- **User/Admin consistency:** Claim decision and payout behavior was aligned so worker and admin panels stay in sync with stored outcomes.
+- **Admin KPI upgrade:** Dashboard now includes pooled-vs-paid visibility for weekly pool monitoring.
+
+---
+
 ## 📱 Try the Mobile App — 3 Steps
 
 ### Step 1 — Install Expo Go on your phone
@@ -51,7 +62,7 @@ Fallback link: `exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/b2d4
 - Enter your phone number → receive OTP → verify
 - Set up your gig worker profile (platform, zone, coverage tier)
 - Dashboard shows live zone status, coverage, and earnings protection
-- Tap **"Simulate Disruption"** to see a live claim → payout in ~9 seconds
+- Tap **"Simulate Disruption"** to watch a live claim flow end-to-end (verification → fraud checks → decision)
 
 ---
 
@@ -191,8 +202,9 @@ npm run dev
 - **ML Premium Engine** — dynamic weekly premium based on zone risk + tenure
 - **Real-time WebSockets** — claim status updates pushed live to mobile + admin
 - **Forecast Shield** — proactive coverage upgrade before predicted disruptions
-- **Earnings DNA** — 7×24 heatmap of worker earning patterns
+- **Earnings DNA** — quick earnings snapshot with live demand, next peak window, today potential, and week progress
 - **Disruption demo payouts** — `payout_engine.compute_demo_dna_payout` models ₹/hr at risk (capped by tier), with guards so repeated tiny demo runs or quiet IST hours do not produce meaningless ₹4-style credits (see `safenet_v2/backend/app/engines/payout_engine.py`)
+- **Support + notifications loop** — floating assistant, support history, admin replies, and notification center (admin-reply focused user alerts)
 
 ---
 
