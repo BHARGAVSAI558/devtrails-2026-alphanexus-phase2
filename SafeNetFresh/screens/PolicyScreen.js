@@ -240,7 +240,7 @@ export default function PolicyScreen() {
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <Text style={[styles.label, { color: colors.sub }]}>Next 14 days — weather outlook</Text>
+        <Text style={[styles.outlookSectionTitle, { color: colors.text }]}>Next 14 days — weather outlook</Text>
         <Text style={[styles.outlookDisclaimer, { color: colors.sub }]}>
           Starting {istTodayLine} (India time) — same “today” as Home → Earnings DNA. Indicative for your area.
         </Text>
@@ -399,6 +399,12 @@ const styles = StyleSheet.create({
   statusHint: { fontSize: 13, marginTop: 8 },
   card: { borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8 },
   label: { fontSize: 13, marginBottom: 8, fontWeight: '600' },
+  outlookSectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+    marginBottom: 8,
+  },
   detailLine: { fontSize: 16, fontWeight: '700', marginTop: 6 },
   outlookDisclaimer: { fontSize: 12, lineHeight: 18, marginBottom: 10, fontWeight: '600' },
   forecastInline: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
