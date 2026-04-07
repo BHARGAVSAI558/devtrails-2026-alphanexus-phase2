@@ -31,9 +31,9 @@
 
 Open **Expo Go** on your phone → tap **"Scan QR Code"** → scan below:
 
-```
-exp://u.expo.dev/safenet
-```
+![SafeNet Worker App QR](safenet_v2/admin/public/worker-app-qr.png)
+
+Fallback link: `exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/b2d4e11e-ec7a-421f-b60e-75132863e7be`
 
 > **OR** — run it yourself in 30 seconds:
 > ```bash
