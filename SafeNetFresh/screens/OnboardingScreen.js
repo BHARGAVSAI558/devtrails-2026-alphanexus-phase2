@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { auth } from '../services/api';
+import { auth, warmBackendOnce } from '../services/api';
 
 const BRAND = '#1A56DB';
 
@@ -23,6 +23,11 @@ export default function OnboardingScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [sentNotice, setSentNotice] = useState('');
+
+  React.useEffect(() => {
+    // Pre-warm backend when onboarding opens to reduce first OTP send latency.
+    void warmBackendOnce();
+  }, []);
 
   const handleSendOtp = async () => {
     Keyboard.dismiss();

@@ -64,6 +64,19 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+let _warmupPromise = null;
+/**
+ * Best-effort API warm-up to reduce first OTP/login delay when hosted backend is cold.
+ */
+export function warmBackendOnce() {
+  if (_warmupPromise) return _warmupPromise;
+  _warmupPromise = axios
+    .get(`${BACKEND_URL}/health`, { timeout: 8000 })
+    .then(() => {})
+    .catch(() => {});
+  return _warmupPromise;
+}
+
 let onUnauthorized = null;
 
 export const setUnauthorizedHandler = (handler) => {

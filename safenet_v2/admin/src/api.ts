@@ -20,6 +20,23 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+let warmupPromise: Promise<void> | null = null;
+/**
+ * Best-effort backend wake-up to reduce first-login latency after Render idle.
+ * Non-blocking; safe to call multiple times.
+ */
+export function warmBackendOnce(): Promise<void> {
+  if (warmupPromise) return warmupPromise;
+  warmupPromise = (async () => {
+    try {
+      await axios.get(`${BASE_URL}/health`, { timeout: 8_000 });
+    } catch {
+      // ignore warmup failures; real requests still handle errors/retries
+    }
+  })();
+  return warmupPromise;
+}
+
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().jwt;

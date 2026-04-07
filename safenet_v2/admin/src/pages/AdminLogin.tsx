@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import api from '../api';
+import api, { warmBackendOnce } from '../api';
 import { useAuthStore } from '../stores/auth';
 
 function formatApiError(e: unknown, fallback: string): string {
@@ -57,6 +57,11 @@ export default function AdminLogin() {
       }
     };
   }, [username, password]);
+
+  useEffect(() => {
+    // Start waking backend as soon as login screen opens.
+    void warmBackendOnce();
+  }, []);
 
   const submit = async () => {
     if (busy.current) return;
