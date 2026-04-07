@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { claims } from '../services/api';
 import { useClaims } from '../contexts/ClaimContext';
+import { formatIstDateTime } from '../utils/istFormat';
 
 const BRAND = '#1a73e8';
 const STEPS = ['Detected', 'Verifying', 'Fraud Check', 'Approved'];
@@ -63,22 +64,6 @@ function disruptionIcon(label) {
   if (t.includes('aqi') || t.includes('air') || t.includes('spike')) return '🏭';
   if (t.includes('curfew')) return '🚫';
   return '⚠️';
-}
-
-function formatHistoryWhen(iso) {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '—';
-  }
 }
 
 export default function ClaimsScreen() {
@@ -143,7 +128,7 @@ export default function ClaimsScreen() {
   return (
     <ScrollView
       style={styles.root}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
       refreshControl={<RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} />}
     >
       <Text style={styles.screenTitle}>Claims</Text>
@@ -226,7 +211,7 @@ export default function ClaimsScreen() {
                 <Text style={styles.histIcon}>{disruptionIcon(row.disruption_type)}</Text>
                 <View style={styles.histMain}>
                   <Text style={styles.histTitle}>{row.disruption_type || 'Disruption'}</Text>
-                  <Text style={styles.histWhen}>{formatHistoryWhen(row.created_at)}</Text>
+                  <Text style={styles.histWhen}>{formatIstDateTime(row.created_at)}</Text>
                 </View>
                 <View
                   style={[

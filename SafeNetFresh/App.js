@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { View, ActivityIndicator, Text, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WsConnectionProvider } from './contexts/WsConnectionContext';
@@ -60,6 +60,9 @@ function tabIcon(emoji, focused) {
 }
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'web' ? 12 : 8);
+  const tabBarHeight = 52 + bottomPad;
   return (
     <Tabs.Navigator
       screenOptions={{
@@ -68,8 +71,9 @@ function MainTabs() {
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           borderTopColor: 'rgba(0,0,0,0.08)',
-          paddingTop: 4,
-          height: 58,
+          paddingTop: 6,
+          paddingBottom: bottomPad,
+          height: tabBarHeight,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
       }}

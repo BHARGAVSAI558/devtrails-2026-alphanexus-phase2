@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CommonActions } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -53,6 +54,7 @@ function ProfileRow({ label, children, isLast }) {
 }
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { signOut, workerProfile } = useAuth();
   const { resetClaims } = useClaims();
   const { resetPolicy, policy } = usePolicy();
@@ -102,7 +104,10 @@ export default function ProfileScreen() {
   }, [profile?.name]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+    >
       <Text style={styles.title}>Account</Text>
 
       {isLoading && !profile ? (

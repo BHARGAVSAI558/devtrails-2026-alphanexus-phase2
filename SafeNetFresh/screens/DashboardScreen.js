@@ -13,6 +13,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -29,6 +30,7 @@ import AppModal from '../components/AppModal';
 import { logButtonTap, logClaimStatusView } from '../services/device_fingerprint.service';
 import { trustBadge } from '../utils/trustBadge';
 import { canonicalTierLabel } from '../utils/tierDisplay';
+import { formatPayoutWhen, formatIstTodayLong } from '../utils/istFormat';
 
 function getTimeGreeting(now = new Date()) {
   const h = now.getHours();
@@ -398,6 +400,7 @@ function Stepper({ step, flagged, scheme }) {
 }
 
 export default function DashboardScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const scheme = useColorScheme() || 'light';
   const qc = useQueryClient();
   const { userId, workerProfile } = useAuth();
@@ -563,6 +566,7 @@ export default function DashboardScreen({ navigation }) {
   const [dnaExpanded, setDnaExpanded] = useState(false);
   const [coverageExpanded, setCoverageExpanded] = useState(false);
   const [tick, setTick] = useState(0);
+  const [dnaTick, setDnaTick] = useState(0);
   const [dnaTooltip, setDnaTooltip] = useState({
     visible: false,
     dayName: '',
@@ -575,6 +579,11 @@ export default function DashboardScreen({ navigation }) {
 
   useEffect(() => {
     const id = setInterval(() => setTick((x) => x + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setDnaTick((x) => x + 1), 4000);
     return () => clearInterval(id);
   }, []);
 
@@ -622,7 +631,8 @@ export default function DashboardScreen({ navigation }) {
     queryKey: ['earningsDna'],
     queryFn: () => workersApi.getEarningsDna(),
     enabled: Boolean(userId),
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchInterval: 90 * 1000,
   });
 
   const dnaMaxDisplay = useMemo(() => {
@@ -801,6 +811,21 @@ export default function DashboardScreen({ navigation }) {
     return 'Updated earlier';
   }, [zoneStatusQuery.dataUpdatedAt, tick]);
 
+  const dnaUpdatedText = useMemo(() => {
+    const t = dnaQuery.dataUpdatedAt;
+    if (!t) return '';
+    void dnaTick;
+    if (dnaQuery.isRefetching || dnaQuery.isFetching) return 'Live · refreshing pattern…';
+    const sec = Math.floor((Date.now() - t) / 1000);
+    if (sec < 6) return 'Live · pattern just synced';
+    if (sec < 60) return `Live · synced ${sec}s ago`;
+    const m = Math.floor(sec / 60);
+    if (m < 120) return `Live · synced ${m}m ago`;
+    return 'Pattern last synced from server';
+  }, [dnaQuery.dataUpdatedAt, dnaQuery.isRefetching, dnaQuery.isFetching, dnaTick]);
+
+  const istTodayLine = useMemo(() => formatIstTodayLong(), []);
+
   const rideStatus = useMemo(() => {
     if (disruptionActive) return { key: 'red', label: 'Disruption active', bar: '#dc2626' };
     if (safeLevel === 'WATCH' || (Number.isFinite(aqiNum) && aqiNum > 150))
@@ -852,7 +877,10 @@ export default function DashboardScreen({ navigation }) {
 
       <ScrollView
         style={[styles.container, { backgroundColor: colors.bg }]}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, 12) + 72 },
+        ]}
         refreshControl={<RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} />}
       >
       <LinearGradient
@@ -1042,6 +1070,10 @@ export default function DashboardScreen({ navigation }) {
               </Text>
             </View>
             <Text style={[styles.cardSub, { color: colors.muted }]}>
+              {dnaUpdatedText ? `${dnaUpdatedText} · ` : ''}
+              {istTodayLine} (IST). Rows Mon–Sun match this week.
+            </Text>
+            <Text style={[styles.cardSub, { color: colors.muted, marginTop: 4 }]}>
               {dnaExpanded
                 ? 'Tap to collapse · darker green = busier hours (typical ₹/hr)'
                 : dnaQuery.data?.peak_window?.label
@@ -1278,7 +1310,7 @@ export default function DashboardScreen({ navigation }) {
               setDisruptionSheetVisible(true);
             }}
           >
-            <Text style={styles.simulateCtaText}>Simulate Disruption — See a live claim in ~9 seconds</Text>
+            <Text style={styles.simulateCtaText}>Simulate disruption — watch a live claim end-to-end</Text>
           </TouchableOpacity>
           <Text style={[styles.simulateCtaHint, { color: colors.muted }]}>
             Full fraud + payout pipeline — best for judge demos. Use Coverage & Claims tabs for more.
@@ -1305,7 +1337,7 @@ export default function DashboardScreen({ navigation }) {
           </Text>
         ) : (
           payouts.map((p) => {
-            const when = p.date || (p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN') : '—');
+            const when = formatPayoutWhen(p);
             const amount =
               typeof p.amount === 'number'
                 ? p.amount

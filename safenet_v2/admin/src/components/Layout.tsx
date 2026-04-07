@@ -109,12 +109,12 @@ export default function Layout() {
           flex-shrink: 0;
           height: 100%;
           max-height: 100%;
-          background: #f8fafc;
-          color: #0f172a;
+          background: linear-gradient(180deg, #0f172a 0%, #1e293b 52%, #0f172a 100%);
+          color: #f8fafc;
           display: flex;
           flex-direction: column;
-          border-right: 1px solid var(--admin-border);
-          box-shadow: none;
+          border-right: 1px solid rgba(15, 23, 42, 0.85);
+          box-shadow: 4px 0 24px rgba(15, 23, 42, 0.12);
           overflow: hidden;
         }
         .admin-sidebar-brand {
@@ -131,8 +131,8 @@ export default function Layout() {
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: #e2e8f0;
-          color: #1e293b;
+          background: rgba(59, 130, 246, 0.22);
+          color: #bfdbfe;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -145,11 +145,12 @@ export default function Layout() {
           font-size: 1.125rem;
           letter-spacing: -0.02em;
           line-height: 1.2;
+          color: #f8fafc;
         }
         .admin-brand-sub {
           font-size: 0.75rem;
           font-weight: 600;
-          color: #64748b;
+          color: #94a3b8;
           text-transform: uppercase;
           letter-spacing: 0.08em;
           margin-top: 2px;
@@ -160,8 +161,8 @@ export default function Layout() {
           gap: 10px;
           padding: 10px 12px;
           border-radius: 10px;
-          background: #ffffff;
-          border: 1px solid var(--admin-border);
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .admin-ws-dot {
           width: 8px;
@@ -171,11 +172,11 @@ export default function Layout() {
           flex-shrink: 0;
           background: #94a3b8;
         }
-        .admin-ws-dot[data-live="true"] { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
+        .admin-ws-dot[data-live="true"] { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
         .admin-ws-dot[data-reconnect="true"] { background: #fbbf24; }
         .admin-ws-text-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-        .admin-ws-label { font-size: 0.8125rem; font-weight: 700; }
-        .admin-ws-sub { font-size: 0.6875rem; color: #64748b; font-weight: 600; }
+        .admin-ws-label { font-size: 0.8125rem; font-weight: 700; color: #f1f5f9; }
+        .admin-ws-sub { font-size: 0.6875rem; color: #94a3b8; font-weight: 600; }
         .admin-nav {
           flex: 1;
           min-height: 0;
@@ -193,7 +194,7 @@ export default function Layout() {
           gap: 12px;
           padding: 12px 14px;
           border-radius: 10px;
-          color: #475569;
+          color: #cbd5e1;
           text-decoration: none;
           font-size: 0.9375rem;
           font-weight: 600;
@@ -202,22 +203,22 @@ export default function Layout() {
           border-left: 2px solid transparent;
         }
         .admin-nav-link:hover {
-          background: #f1f5f9;
-          color: #0f172a;
+          background: rgba(255, 255, 255, 0.06);
+          color: #f8fafc;
         }
         .admin-nav-link--active {
-          background: #eff6ff;
-          color: #0f172a;
-          border-color: #dbeafe;
-          border-left-color: #2563eb;
+          background: rgba(37, 99, 235, 0.35);
+          color: #f8fafc;
+          border-color: rgba(96, 165, 250, 0.35);
+          border-left-color: #60a5fa;
           box-shadow: none;
         }
         .admin-nav-icon {
           width: 20px;
           height: 20px;
           border-radius: 6px;
-          background: #e2e8f0;
-          color: #334155;
+          background: rgba(255, 255, 255, 0.08);
+          color: #e2e8f0;
           font-size: 11px;
           font-weight: 700;
           display: inline-flex;
@@ -233,15 +234,15 @@ export default function Layout() {
           width: 100%;
           padding: 11px 14px;
           border-radius: 10px;
-          border: 1px solid var(--admin-border);
-          background: #ffffff;
-          color: #0f172a;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.06);
+          color: #f1f5f9;
           font-weight: 700;
           font-size: 0.875rem;
           cursor: pointer;
           transition: background 0.15s;
         }
-        .admin-logout:hover { background: #f8fafc; }
+        .admin-logout:hover { background: rgba(255, 255, 255, 0.1); }
         .admin-main {
           flex: 1;
           min-width: 0;
@@ -250,6 +251,7 @@ export default function Layout() {
           overflow-y: auto;
           padding: clamp(16px, 3vw, 32px);
           -webkit-overflow-scrolling: touch;
+          background: var(--admin-main-tint, var(--admin-bg));
         }
         @media (max-width: 1024px) {
           .admin-shell {

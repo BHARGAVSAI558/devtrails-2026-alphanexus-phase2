@@ -11,6 +11,7 @@ import {
   useColorScheme,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import AppModal from '../components/AppModal';
@@ -18,6 +19,7 @@ import { policies, zones as zonesApi } from '../services/api';
 import { usePolicy } from '../contexts/PolicyContext';
 import { useWorkerProfile } from '../hooks/useWorkerProfile';
 import { canonicalTierLabel } from '../utils/tierDisplay';
+import { buildOutlook14Ist, formatIstTodayLong } from '../utils/istFormat';
 
 function policySnapshotFromActivate(activated, prev) {
   const validUntil = activated?.valid_until;
@@ -69,44 +71,8 @@ function formatUntil(iso) {
   }
 }
 
-function buildOutlook14(zoneId) {
-  const z = String(zoneId || 'hyd_central');
-  const seed = Array.from(z).reduce((a, c) => a + c.charCodeAt(0), 0);
-  const days = [];
-  const now = new Date();
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + i);
-    const r = (seed + i * 31) % 100;
-    let icon = '⛅';
-    let tag = 'Clear';
-    let tone = '#64748b';
-    if (r > 78) {
-      icon = '☔';
-      tag = 'Wet';
-      tone = '#1d4ed8';
-    } else if (r > 55) {
-      icon = '🌤️';
-      tag = 'Mixed';
-      tone = '#ca8a04';
-    } else if (r < 18) {
-      icon = '🌡️';
-      tag = 'Hot';
-      tone = '#dc2626';
-    }
-    days.push({
-      key: i,
-      dow: d.toLocaleDateString('en-IN', { weekday: 'short' }),
-      dayNum: d.getDate(),
-      icon,
-      tag,
-      tone,
-    });
-  }
-  return days;
-}
-
 export default function PolicyScreen() {
+  const insets = useSafeAreaInsets();
   const scheme = useColorScheme() || 'light';
   const qc = useQueryClient();
   const { setPolicy } = usePolicy();
@@ -138,7 +104,8 @@ export default function PolicyScreen() {
   });
 
   const p = policyQuery.data;
-  const outlookDays = useMemo(() => buildOutlook14(zoneId), [zoneId]);
+  const outlookDays = useMemo(() => buildOutlook14Ist(zoneId), [zoneId]);
+  const istTodayLine = useMemo(() => formatIstTodayLong(), []);
 
   useEffect(() => {
     if (p) {
@@ -217,7 +184,7 @@ export default function PolicyScreen() {
     <View style={[styles.screenWrap, Platform.OS === 'web' && styles.screenWrapWeb]}>
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bg }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 28 }]}
       refreshControl={<RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} />}
     >
       <Text style={[styles.title, { color: colors.text }]}>Coverage</Text>
@@ -275,7 +242,7 @@ export default function PolicyScreen() {
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Text style={[styles.label, { color: colors.sub }]}>Next 14 days — weather outlook</Text>
         <Text style={[styles.outlookDisclaimer, { color: colors.sub }]}>
-          Indicative calendar for your area. If several days look rough, consider upgrading tier below.
+          Starting {istTodayLine} (India time) — same “today” as Home → Earnings DNA. Indicative for your area.
         </Text>
         {shieldHint ? (
           <Text style={[styles.forecastInline, { color: colors.text }]}>Now: {shieldHint}</Text>

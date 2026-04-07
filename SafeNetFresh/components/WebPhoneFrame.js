@@ -39,7 +39,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 20,
     paddingHorizontal: 16,
-    minHeight: '100vh',
+    ...Platform.select({
+      web: { minHeight: '100dvh' },
+      default: { minHeight: '100%' },
+    }),
   },
   device: {
     width: '100%',
@@ -63,11 +66,10 @@ const styles = StyleSheet.create({
   fullBleed: {
     flex: 1,
     width: '100%',
-    minHeight: '100vh',
     backgroundColor: '#f0f4ff',
     ...Platform.select({
-      web: { position: 'relative' },
-      default: {},
+      web: { position: 'relative', minHeight: '100dvh' },
+      default: { minHeight: '100%' },
     }),
   },
 });
