@@ -79,6 +79,20 @@ def _approved_message(scenario: str, payout: float) -> str:
     return f"₹{p} credited — curfew disruption verified in your zone"
 
 
+def _deterministic_demo_payout(expected_slot: float, daily_cap: float, scenario: str, cycle_idx: int) -> float:
+    """Stable, realistic payout range — no random jumps."""
+    mult = {
+        "HEAVY_RAIN": 0.46,
+        "EXTREME_HEAT": 0.42,
+        "AQI_SPIKE": 0.40,
+        "CURFEW": 0.38,
+    }.get(scenario, 0.4)
+    # Tiny deterministic variation by cycle so payouts feel natural but repeatable.
+    wobble = [0.98, 1.0, 1.03][cycle_idx % 3]
+    amt = max(40.0, float(expected_slot) * mult * wobble)
+    return round(min(float(daily_cap), amt), 2)
+
+
 class SimulationRunRequest(BaseModel):
     scenario: Literal["HEAVY_RAIN", "EXTREME_HEAT", "AQI_SPIKE", "CURFEW"]
     zone_id: str = Field(default="", max_length=128)
@@ -150,6 +164,10 @@ async def _demo_claim_pipeline(
                 daily_cap,
                 sims_for_dna,
             )
+            # Realistic demo cadence: 2 payouts, then 1 no-disruption (no payout).
+            cycle_idx = len(sims_for_dna) % 3
+            no_disruption_this_run = cycle_idx == 2
+            payout = _deterministic_demo_payout(expected_slot, daily_cap, body.scenario, cycle_idx)
             raw_loss = float(breakdown["loss"])
             actual_income = max(0.0, round(float(expected_slot) - raw_loss, 2))
 
@@ -163,13 +181,17 @@ async def _demo_claim_pipeline(
                 weather_disruption=body.scenario in ("HEAVY_RAIN", "EXTREME_HEAT"),
                 traffic_disruption=False,
                 event_disruption=body.scenario == "CURFEW",
-                final_disruption=True,
+                final_disruption=not no_disruption_this_run,
                 expected_income=float(expected_slot),
                 actual_income=actual_income,
                 loss=raw_loss,
-                payout=payout,
-                decision=DecisionType.APPROVED,
-                reason=f"Demo approved — {body.scenario}",
+                payout=0.0 if no_disruption_this_run else payout,
+                decision=DecisionType.REJECTED if no_disruption_this_run else DecisionType.APPROVED,
+                reason=(
+                    f"No live disruption found in {zone_label} during this check"
+                    if no_disruption_this_run
+                    else f"Demo approved — {body.scenario}"
+                ),
                 weather_data=json.dumps(weather_payload),
             )
             db.add(sim)
@@ -239,25 +261,43 @@ async def _demo_claim_pipeline(
                 zone_id,
                 datetime.now(timezone.utc),
             )
-            await publish_claim_update(
-                redis=redis,
-                worker_id=worker_id,
-                claim_id=cid,
-                status="APPROVED",
-                message=_approved_message(body.scenario, payout) + fs_suffix,
-                payout_amount=payout,
-                zone_id=zone_id,
-                disruption_type=body.scenario,
-                fraud_score=0.1,
-                correlation_id=run_id,
-                payout_breakdown=breakdown,
-                daily_coverage=daily_cap,
-            )
+            if no_disruption_this_run:
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status="CLAIM_REJECTED",
+                    message=f"No confirmed disruption in {zone_label}. Monitoring continues in real time.",
+                    payout_amount=0.0,
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    fraud_score=0.1,
+                    correlation_id=run_id,
+                    payout_breakdown=breakdown,
+                    daily_coverage=daily_cap,
+                )
+            else:
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status="APPROVED",
+                    message=_approved_message(body.scenario, payout) + fs_suffix,
+                    payout_amount=payout,
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    fraud_score=0.1,
+                    correlation_id=run_id,
+                    payout_breakdown=breakdown,
+                    daily_coverage=daily_cap,
+                )
 
             if prof_row is not None:
                 prof_row.total_claims = int(prof_row.total_claims or 0) + 1
-                prof_row.total_payouts = float(prof_row.total_payouts or 0.0) + float(payout)
-            db.add(PayoutRecord(simulation_id=cid, amount=payout, currency="INR", status="completed"))
+                if not no_disruption_this_run:
+                    prof_row.total_payouts = float(prof_row.total_payouts or 0.0) + float(payout)
+            if not no_disruption_this_run:
+                db.add(PayoutRecord(simulation_id=cid, amount=payout, currency="INR", status="completed"))
             db.add(
                 FraudSignal(
                     user_id=worker_id,
@@ -271,16 +311,25 @@ async def _demo_claim_pipeline(
                 Log(
                     user_id=worker_id,
                     event_type="simulation_run",
-                    detail=f"decision=APPROVED payout={payout} run={run_id}",
+                    detail=f"decision={'REJECTED' if no_disruption_this_run else 'APPROVED'} payout={0.0 if no_disruption_this_run else payout} run={run_id}",
                 )
             )
-            await create_notification(
-                db,
-                user_id=worker_id,
-                ntype="payout",
-                title=f"₹{int(round(payout))} credited",
-                message="Disruption verified. Payout added to your wallet.",
-            )
+            if no_disruption_this_run:
+                await create_notification(
+                    db,
+                    user_id=worker_id,
+                    ntype="system",
+                    title="No disruption detected",
+                    message="No verified disruption this run. SafeNet is still monitoring your zone.",
+                )
+            else:
+                await create_notification(
+                    db,
+                    user_id=worker_id,
+                    ntype="payout",
+                    title=f"₹{int(round(payout))} credited",
+                    message="Disruption verified. Payout added to your wallet.",
+                )
             await db.commit()
 
     except Exception as exc:

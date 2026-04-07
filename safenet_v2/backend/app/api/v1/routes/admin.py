@@ -748,10 +748,12 @@ async def run_admin_simulation(
     fraud_scenario = str(body.get("fraud_scenario") or "none")
     created = []
     users = (await db.execute(select(User).limit(max(1, min(25, workers))))).scalars().all()
-    for u in users:
+    for idx, u in enumerate(users):
         fraud_score = 0.85 if fraud_scenario == "ring_fraud" else (0.75 if fraud_scenario == "gps_spoof" else 0.2)
-        decision = DecisionType.FRAUD if fraud_score > 0.8 else DecisionType.APPROVED
-        payout = 0.0 if decision == DecisionType.FRAUD else random.randint(100, 800)
+        no_disruption = (idx % 3) == 2 and fraud_scenario == "none"
+        decision = DecisionType.FRAUD if fraud_score > 0.8 else (DecisionType.REJECTED if no_disruption else DecisionType.APPROVED)
+        base = 120 + ((u.id * 37) % 340)
+        payout = 0.0 if decision != DecisionType.APPROVED else float(min(700, base))
         sim = Simulation(
             user_id=u.id,
             is_active=True,
@@ -760,13 +762,13 @@ async def run_admin_simulation(
             weather_disruption=True,
             traffic_disruption=False,
             event_disruption=False,
-            final_disruption=True,
-            expected_income=1000,
-            actual_income=500,
-            loss=500,
+            final_disruption=not no_disruption,
+            expected_income=900,
+            actual_income=500 if decision == DecisionType.APPROVED else 900,
+            loss=400 if decision == DecisionType.APPROVED else 0,
             payout=payout,
             decision=decision,
-            reason=f"{disruption_type} in {zone}",
+            reason=(f"{disruption_type} in {zone}" if decision == DecisionType.APPROVED else f"No disruption in {zone}"),
             weather_data=json.dumps({"zone": zone, "disruption_type": disruption_type}),
         )
         db.add(sim)
@@ -815,6 +817,8 @@ async def get_dashboard_kpis(admin: User = Depends(get_admin_user), db: AsyncSes
 
     pools_map = await _latest_pools_by_zone_raw(db)
     ratios: List[float] = []
+    pooled_total = 0.0
+    paid_total = 0.0
     for z in HYDERABAD_ZONES_GEO:
         zid = str(z["zone_id"])
         p = _pool_row_for_canonical(pools_map, zid)
@@ -822,6 +826,8 @@ async def get_dashboard_kpis(admin: User = Depends(get_admin_user), db: AsyncSes
             continue
         bal = float(p.pool_balance_start_of_week or 0.0)
         pay = float(p.total_payouts_this_week or 0.0)
+        pooled_total += bal
+        paid_total += pay
         if bal > 0:
             ratios.append(pay / bal)
     pool_utilization_pct = round(sum(ratios) / len(ratios) * 100.0, 1) if ratios else 0.0
@@ -850,6 +856,8 @@ async def get_dashboard_kpis(admin: User = Depends(get_admin_user), db: AsyncSes
         "loss_ratio_actual_pct": round(60 + (disruption_rate / 100) * 15, 1),
         "loss_ratio_target_low": 60,
         "loss_ratio_target_high": 75,
+        "pooled_total_amount": round(pooled_total, 2),
+        "paid_total_amount": round(paid_total, 2),
     }
 
 

@@ -23,6 +23,7 @@ export default function AssistantModal({ visible, onClose }) {
     queryFn: () => support.history(userId),
     enabled: visible && Boolean(userId),
     staleTime: 10_000,
+    refetchInterval: visible ? 5_000 : false,
   });
 
   const sendMutation = useMutation({

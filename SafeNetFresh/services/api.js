@@ -326,10 +326,11 @@ export const support = {
 };
 
 export const notifications = {
-  list: async (userId) =>
-    unwrap(await api.get('/notifications', { params: { user_id: userId } })),
+  list: async (userId, opts = {}) =>
+    unwrap(await api.get('/notifications', { params: { user_id: userId, ntype: opts?.type } })),
   markRead: async (id) => unwrap(await api.post(`/notifications/mark-read/${id}`)),
   markAllRead: async () => unwrap(await api.post('/notifications/mark-all-read')),
+  clearAll: async () => unwrap(await api.post('/notifications/clear-all')),
 };
 
 export default api;

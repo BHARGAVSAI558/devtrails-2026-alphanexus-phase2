@@ -29,6 +29,8 @@ type AdminKpiResponse = {
   loss_ratio_actual_pct: number;
   loss_ratio_target_low: number;
   loss_ratio_target_high: number;
+  pooled_total_amount?: number;
+  paid_total_amount?: number;
 };
 
 const EMPTY_KPIS: AdminKpiResponse = {
@@ -41,6 +43,8 @@ const EMPTY_KPIS: AdminKpiResponse = {
   loss_ratio_actual_pct: 0,
   loss_ratio_target_low: 60,
   loss_ratio_target_high: 75,
+  pooled_total_amount: 0,
+  paid_total_amount: 0,
 };
 
 type ClaimDrawerState = {
@@ -222,6 +226,10 @@ export default function Dashboard() {
         title="Pool Utilization % (All Zones)"
         value={`${poolUtilizationPct}%`}
         delta={{ label: 'risk-based', direction: poolUtilizationPct > 80 ? 'down' : 'flat' }}
+      />
+      <KpiCard
+        title="Pooled vs Paid (Week)"
+        value={`₹${Math.round((kpis?.pooled_total_amount ?? 0) / 1000)}k / ₹${Math.round((kpis?.paid_total_amount ?? 0) / 1000)}k`}
       />
     </div>
   );

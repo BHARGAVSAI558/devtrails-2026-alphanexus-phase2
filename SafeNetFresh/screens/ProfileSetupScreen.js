@@ -23,7 +23,6 @@ const BRAND = '#1A56DB';
 const PLATFORMS = [
   { id: 'zomato', label: 'Zomato', color: '#E23744', earnMid: 780 },
   { id: 'swiggy', label: 'Swiggy', color: '#FC8019', earnMid: 720 },
-  { id: 'both', label: 'Both', color: '#7c3aed', earnMid: 950 },
   { id: 'other', label: 'Other', color: '#475569', earnMid: 650 },
 ];
 

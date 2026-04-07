@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.routes.admin import get_admin_user
 from app.api.v1.routes.workers import get_current_user
 from app.db.session import get_db
+from app.models.claim import ClaimLifecycle, DecisionType, Simulation
 from app.models.support import SupportQuery
 from app.models.worker import User
-from app.services.notification_service import create_notification
 
 router = APIRouter()
 
@@ -27,15 +27,59 @@ class SupportReplyBody(BaseModel):
     admin_reply: str = Field(..., min_length=2, max_length=2000)
 
 
-def _auto_system_reply(msg: str) -> str:
+def _fallback_system_reply(msg: str) -> str:
     t = msg.lower()
     if "payout" in t:
-        return "Payout is calculated from disruption verification, fraud checks, and your earning fingerprint for that slot."
+        return "Payout is based on disruption verification, fraud checks, and your earning fingerprint for that time slot."
     if "claim" in t:
-        return "Claims move through verification → fraud check → decision. You can track every step in Claims."
+        return "Claim flow is: disruption detected → verification → fraud checks → decision. You can track this in Claims."
     if "weather" in t or "rain" in t:
-        return "Weather alerts are monitored continuously for your zone. If risk is verified, SafeNet evaluates payout eligibility automatically."
+        return "Weather risk is monitored for your zone continuously. If disruption is verified, SafeNet evaluates payout automatically."
     return "Thanks for reaching out. We logged your query and our team can reply here shortly."
+
+
+async def _auto_system_reply(db: AsyncSession, user_id: int, msg: str) -> str:
+    t = msg.lower()
+    life = (
+        await db.execute(
+            select(ClaimLifecycle)
+            .where(ClaimLifecycle.user_id == user_id)
+            .order_by(ClaimLifecycle.created_at.desc(), ClaimLifecycle.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if life is not None:
+        st = str(life.status or "").upper()
+        dis = str(life.disruption_type or "disruption").replace("_", " ").title()
+        if "under review" in t or "review" in t or "claim" in t:
+            if st in {"INITIATED", "VERIFYING", "BEHAVIORAL_CHECK", "FRAUD_CHECK", "REVALIDATING"}:
+                return f"Your latest {dis} claim is currently {st.replace('_', ' ').title()}. We are still verifying signals and fraud safety."
+            if st in {"APPROVED", "PAYOUT_DONE", "PAYOUT_CREDITED"}:
+                return f"Your latest {dis} claim is approved. Payout update should be visible shortly in Home and Claims."
+            if st in {"BLOCKED", "REJECTED", "CLAIM_REJECTED"}:
+                return "Your latest claim was not approved after verification checks. You can ask for manual review and an admin can respond here."
+        if "disruption" in t or "real time" in t:
+            if st in {"INITIATED", "VERIFYING", "BEHAVIORAL_CHECK", "FRAUD_CHECK", "REVALIDATING"}:
+                return f"Live disruption workflow is active for {dis}. Status is {st.replace('_', ' ').title()} right now."
+
+    sim = (
+        await db.execute(
+            select(Simulation)
+            .where(Simulation.user_id == user_id)
+            .order_by(Simulation.created_at.desc(), Simulation.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if sim is not None and ("payout" in t or "no payout" in t):
+        dec = str(sim.decision.value if hasattr(sim.decision, "value") else sim.decision).upper()
+        if dec == DecisionType.APPROVED.value:
+            return f"Your most recent claim is approved with payout ₹{int(round(float(sim.payout or 0.0)))}."
+        if dec == DecisionType.FRAUD.value:
+            return "Your latest claim was blocked due to fraud-risk checks. If you think this is incorrect, ask for manual review."
+        if dec == DecisionType.REJECTED.value:
+            return "Your latest claim was rejected because disruption or activity checks did not meet payout rules."
+
+    return _fallback_system_reply(msg)
 
 
 def _as_utc_iso(dt: Any) -> str:
@@ -59,7 +103,7 @@ async def create_support_query(
         asked = int(str(body.user_id).strip())
         if asked == current_user.id:
             uid = asked
-    sys_reply = _auto_system_reply(body.message)
+    sys_reply = await _auto_system_reply(db, uid, body.message)
     row = SupportQuery(
         user_id=uid,
         message=body.message.strip(),
@@ -70,13 +114,6 @@ async def create_support_query(
     )
     db.add(row)
     await db.flush()
-    await create_notification(
-        db,
-        user_id=uid,
-        ntype="system",
-        title="Support query received",
-        message="We got your message. You’ll see an admin reply here when available.",
-    )
     await db.commit()
     return {"ok": True, "id": row.id}
 

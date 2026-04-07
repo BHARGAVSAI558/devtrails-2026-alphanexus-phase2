@@ -4,7 +4,7 @@ from typing import Optional, Any
 
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.routes.workers import get_current_user
@@ -82,20 +82,22 @@ def _as_utc_iso(dt: Any) -> str:
 @router.get("")
 async def list_notifications(
     user_id: str | None = None,
+    ntype: str | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     uid = current_user.id
     if user_id and str(user_id).isdigit() and int(str(user_id)) == current_user.id:
         uid = int(str(user_id))
-    rows = (
-        await db.execute(
-            select(Notification)
-            .where(Notification.user_id == uid)
-            .order_by(Notification.created_at.desc(), Notification.id.desc())
-            .limit(200)
-        )
-    ).scalars().all()
+    stmt = (
+        select(Notification)
+        .where(Notification.user_id == uid)
+        .order_by(Notification.created_at.desc(), Notification.id.desc())
+        .limit(200)
+    )
+    if ntype:
+        stmt = stmt.where(Notification.type == str(ntype))
+    rows = (await db.execute(stmt)).scalars().all()
     unread = sum(1 for r in rows if not bool(r.is_read))
     return {
         "unread_count": unread,
@@ -154,5 +156,15 @@ async def mark_all_read(
     db: AsyncSession = Depends(get_db),
 ):
     await db.execute(update(Notification).where(Notification.user_id == current_user.id).values(is_read=True))
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/clear-all")
+async def clear_all(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(delete(Notification).where(Notification.user_id == current_user.id))
     await db.commit()
     return {"ok": True}

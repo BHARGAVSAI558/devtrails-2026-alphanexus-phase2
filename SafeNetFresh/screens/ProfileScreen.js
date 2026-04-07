@@ -24,7 +24,6 @@ const LADDER = ['Newcomer', 'Verified', 'Trusted', 'Guardian', 'Champion'];
 const PLATFORM_UI = {
   zomato: { bg: '#fef2f2', color: '#E23744', label: 'Zomato' },
   swiggy: { bg: '#fff7ed', color: '#EA580C', label: 'Swiggy' },
-  both: { bg: '#f5f3ff', color: '#7c3aed', label: 'Both' },
   other: { bg: '#f1f5f9', color: '#475569', label: 'Other' },
 };
 
@@ -118,7 +117,7 @@ export default function ProfileScreen() {
       ) : null}
 
       <LinearGradient
-        colors={['#1a73e8', '#38bdf8']}
+        colors={['#4f8ef7', '#1d4ed8']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}
@@ -205,16 +204,21 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4ff' },
-  content: { padding: 20, paddingBottom: 48 },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
+  content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
   title: { fontSize: 22, fontWeight: '900', color: '#1a1a2e', marginBottom: 16 },
   loadingWrap: { padding: 24, alignItems: 'center' },
   loadingHint: { marginTop: 10, color: '#64748b', fontWeight: '600' },
   hero: {
     borderRadius: 20,
-    padding: 24,
-    marginBottom: 16,
+    padding: 20,
+    marginBottom: 18,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   avatar: {
     width: 72,
@@ -226,32 +230,34 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarText: { fontSize: 28, fontWeight: '900', color: '#fff' },
-  heroName: { fontSize: 22, fontWeight: '900', color: '#fff', textAlign: 'center' },
-  heroSub: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginTop: 6 },
+  heroName: { fontSize: 24, fontWeight: '900', color: '#fff', textAlign: 'center' },
+  heroSub: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.74)', marginTop: 6 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 18,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 9,
     shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardTitle: { fontSize: 12, fontWeight: '800', color: '#64748b', letterSpacing: 0.6, marginBottom: 12 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 12, gap: 12 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
-  rowLabel: { width: 118, fontSize: 14, color: '#64748b', fontWeight: '700', paddingTop: 2 },
-  rowValue: { flex: 1 },
-  rowValueText: { fontSize: 16, color: '#1a1a2e', fontWeight: '800' },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: 12 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: '#eee', marginVertical: 6 },
+  rowLabel: { width: 128, fontSize: 14, color: '#6b7280', fontWeight: '700', paddingTop: 1 },
+  rowValue: { flex: 1, alignItems: 'flex-end' },
+  rowValueText: { fontSize: 16, color: '#1a1a2e', fontWeight: '600', textAlign: 'right' },
   platformBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: '#fff3e0',
   },
-  platformBadgeText: { fontWeight: '900', fontSize: 14 },
-  ladderRow: { flexDirection: 'row', justifyContent: 'flex-start', gap: 8 },
+  platformBadgeText: { fontWeight: '800', fontSize: 14 },
+  ladderRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   ladderDot: {
     width: 22,
     height: 22,
@@ -260,13 +266,13 @@ const styles = StyleSheet.create({
   },
   ladderDotFilled: { backgroundColor: '#1a73e8', borderColor: '#1a73e8' },
   ladderDotEmpty: { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
-  ladderCaption: { fontSize: 13, color: '#475569', fontWeight: '700', marginTop: 8 },
+  ladderCaption: { fontSize: 13, color: '#475569', fontWeight: '700', marginTop: 6, textAlign: 'right' },
   sectionTitle: { fontSize: 15, fontWeight: '900', color: '#1a1a2e', marginBottom: 8 },
-  policyRow: { paddingVertical: 10 },
+  policyRow: { paddingVertical: 14 },
   policyRowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' },
   policyLine: { fontSize: 14, fontWeight: '800', color: '#1a1a2e' },
-  policyMeta: { fontSize: 12, color: '#777', marginTop: 4 },
+  policyMeta: { fontSize: 11, color: '#9ca3af', marginTop: 4 },
   muted: { fontSize: 13, color: '#777' },
-  logoutBtn: { backgroundColor: '#ffebee', borderRadius: 12, padding: 16, alignItems: 'center' },
-  logoutText: { color: '#c62828', fontWeight: 'bold' },
+  logoutBtn: { backgroundColor: '#fee2e2', borderRadius: 14, padding: 16, alignItems: 'center', width: '100%' },
+  logoutText: { color: '#dc2626', fontWeight: '600' },
 });

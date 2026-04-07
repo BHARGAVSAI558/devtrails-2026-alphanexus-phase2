@@ -19,7 +19,7 @@ export default function NotificationsScreen() {
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: ['notifications', userId],
-    queryFn: () => notifications.list(String(userId || '')),
+    queryFn: () => notifications.list(String(userId || ''), { type: 'admin_reply' }),
     enabled: Boolean(userId),
     refetchInterval: 12000,
   });
@@ -28,8 +28,8 @@ export default function NotificationsScreen() {
     mutationFn: (id) => notifications.markRead(id),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['notifications', userId] }),
   });
-  const markAll = useMutation({
-    mutationFn: () => notifications.markAllRead(),
+  const clearAll = useMutation({
+    mutationFn: () => notifications.clearAll(),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['notifications', userId] }),
   });
 
@@ -47,8 +47,8 @@ export default function NotificationsScreen() {
           <Text style={styles.title}>Notifications</Text>
           <Text style={styles.sub}>{unread} unread</Text>
         </View>
-        <TouchableOpacity style={styles.markBtn} onPress={() => markAll.mutate()} disabled={markAll.isPending}>
-          <Text style={styles.markText}>Mark all read</Text>
+        <TouchableOpacity style={styles.markBtn} onPress={() => clearAll.mutate()} disabled={clearAll.isPending}>
+          <Text style={styles.markText}>Clear all</Text>
         </TouchableOpacity>
       </View>
       {query.isLoading ? (
