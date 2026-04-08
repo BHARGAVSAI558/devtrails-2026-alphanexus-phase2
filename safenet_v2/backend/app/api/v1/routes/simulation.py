@@ -102,18 +102,14 @@ def _deterministic_demo_payout(expected_slot: float, daily_cap: float, scenario:
     return round(amt, 2)
 
 
-def _eligible_scenarios_for_today(user_id: int, now_utc: datetime) -> set[str]:
+def _active_scenario_now(user_id: int, now_utc: datetime) -> str:
     """
-    Rotate exactly 2 payout-eligible disruption types per user per IST day.
-    This keeps demos realistic and non-repetitive.
+    Exactly one active disruption at a time (IST-hour based) so UI can show one red dot.
     """
-    ist_day = now_utc.astimezone(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
-    seed = f"{user_id}:{ist_day}".encode("utf-8")
-    digest = sha256(seed).hexdigest()
+    ist = now_utc.astimezone(timezone(timedelta(hours=5, minutes=30)))
     all_scenarios = ["HEAVY_RAIN", "EXTREME_HEAT", "AQI_SPIKE", "CURFEW"]
-    start = int(digest[:2], 16) % len(all_scenarios)
-    second = (start + 2 + (int(digest[2:4], 16) % 2)) % len(all_scenarios)
-    return {all_scenarios[start], all_scenarios[second]}
+    idx = (int(user_id) * 17 + int(ist.timetuple().tm_yday) + int(ist.hour)) % len(all_scenarios)
+    return all_scenarios[idx]
 
 
 def _deterministic_target_fraction(user_id: int, scenario: str, now_utc: datetime) -> float:
@@ -199,8 +195,8 @@ async def _demo_claim_pipeline(
                 sims_for_dna,
             )
             now_utc = datetime.now(timezone.utc)
-            eligible_today = _eligible_scenarios_for_today(worker_id, now_utc)
-            scenario_allowed_today = body.scenario in eligible_today
+            active_scenario = _active_scenario_now(worker_id, now_utc)
+            scenario_allowed_today = body.scenario == active_scenario
 
             # Block duplicate payout for same disruption type within the same IST day.
             start_ist = now_utc.astimezone(timezone(timedelta(hours=5, minutes=30))).replace(

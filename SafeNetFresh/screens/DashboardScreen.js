@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Animated,
   Pressable,
-  Alert,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -178,14 +177,27 @@ const DEMO_SCENARIOS = [
   { label: 'Zone Curfew', value: 'CURFEW', emoji: '🚫', hint: 'Social disruption' },
 ];
 
-/** Often show “all clear” so every tap does not pay out — feels closer to real checks. */
-const DEMO_NO_EVENT_CHANCE = 0.42;
-const DEMO_NO_EVENT_MESSAGES = {
-  HEAVY_RAIN: 'No heavy rain alerts in your area right now.',
-  EXTREME_HEAT: 'No extreme heat warnings for your zone at the moment.',
-  AQI_SPIKE: 'Air quality looks normal where you ride — no hazard spike.',
-  CURFEW: 'No curfew or movement restrictions reported in your zone.',
-};
+function getActiveScenarioNow(userId) {
+  const list = ['HEAVY_RAIN', 'EXTREME_HEAT', 'AQI_SPIKE', 'CURFEW'];
+  const now = new Date();
+  const ymd = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  const hh = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: 'numeric', hour12: false }).format(now)
+  );
+  const [year, month, day] = String(ymd).split('-').map((v) => Number(v));
+  const current = Date.UTC(Number.isFinite(year) ? year : 2026, (Number.isFinite(month) ? month : 1) - 1, Number.isFinite(day) ? day : 1);
+  const jan1 = Date.UTC(Number.isFinite(year) ? year : 2026, 0, 1);
+  const dayOfYear = Math.max(1, Math.floor((current - jan1) / (24 * 60 * 60 * 1000)) + 1);
+  const h = Number.isFinite(hh) ? hh : 0;
+  const uid = Number.isFinite(Number(userId)) ? Number(userId) : 1;
+  const idx = (uid * 17 + dayOfYear + h) % list.length;
+  return list[idx];
+}
 
 function demoCompletedSteps(status) {
   const s = String(status || '').toUpperCase();
@@ -725,6 +737,7 @@ export default function DashboardScreen({ navigation }) {
     displayWeeklyProtected != null && Number.isFinite(displayWeeklyProtected)
       ? displayWeeklyProtected
       : protectedThisWeek;
+  const activeScenario = useMemo(() => getActiveScenarioNow(userId), [userId, tick]);
 
   const simMutation = useMutation({
     mutationFn: async (scenario) =>
@@ -808,11 +821,14 @@ export default function DashboardScreen({ navigation }) {
       }
     }
 
-    // Always refresh history/payout lists when payout has happened.
+    // Always refresh history after terminal states so Claims tab matches Notifications.
+    if (['APPROVED', 'PAYOUT_DONE', 'PAYOUT_CREDITED', 'CLAIM_REJECTED', 'DECISION_REJECTED', 'BLOCKED', 'REJECTED'].includes(st)) {
+      qc.invalidateQueries({ queryKey: ['claimsHistory'] });
+    }
+    // Refresh payouts only when credited.
     const amt = Number(lastClaimUpdate?.payout_amount ?? 0);
     if (Number.isFinite(amt) && amt > 0) {
       qc.invalidateQueries({ queryKey: ['payoutHistory'] });
-      qc.invalidateQueries({ queryKey: ['claimsHistory'] });
     }
     qc.invalidateQueries({ queryKey: ['workerProfile'] });
     qc.invalidateQueries({ queryKey: ['earningsDna'] });
@@ -1469,13 +1485,6 @@ export default function DashboardScreen({ navigation }) {
                     ]}
                     onPress={() => {
                       logButtonTap('trigger_simulation_button');
-                      if (Math.random() < DEMO_NO_EVENT_CHANCE) {
-                        Alert.alert(
-                          'All clear',
-                          DEMO_NO_EVENT_MESSAGES[s.value] || 'No disruption signals in your area right now.'
-                        );
-                        return;
-                      }
                       weeklyBeforeDemoRef.current = protectedThisWeek;
                       demoStepStatusRef.current = null;
                       simMutation.mutate(s.value);
@@ -1484,7 +1493,9 @@ export default function DashboardScreen({ navigation }) {
                   >
                     <Text style={styles.scenarioEmoji}>{s.emoji}</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.scenarioTitle, { color: colors.text }]}>{s.label}</Text>
+                      <Text style={[styles.scenarioTitle, { color: colors.text }]}>
+                        {s.value === activeScenario ? '🔴 ' : ''}{s.label}
+                      </Text>
                       <Text style={[styles.scenarioHint, { color: colors.muted }]}>{s.hint}</Text>
                     </View>
                     {runningScenario === s.value ? (

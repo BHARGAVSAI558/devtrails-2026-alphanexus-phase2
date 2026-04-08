@@ -132,12 +132,12 @@ export default function ClaimsScreen() {
 
   useEffect(() => {
     const st = String(lastClaimUpdate?.status || '').toUpperCase();
+    const isTerminal = ['APPROVED', 'PAYOUT_DONE', 'PAYOUT_CREDITED', 'CLAIM_REJECTED', 'DECISION_REJECTED', 'BLOCKED', 'REJECTED'].includes(st);
+    if (!isTerminal) return;
+    void historyQuery.refetch();
     const payoutAmt = Number(lastClaimUpdate?.payout_amount ?? 0);
     const hasPayout = Number.isFinite(payoutAmt) && payoutAmt > 0;
-    if (!hasPayout) return;
-    if (!st || (!st.includes('APPROVED') && !st.includes('PAYOUT'))) return;
-    void historyQuery.refetch();
-    void qc.invalidateQueries({ queryKey: ['payoutHistory'] });
+    if (hasPayout) void qc.invalidateQueries({ queryKey: ['payoutHistory'] });
   }, [lastClaimUpdate?.claim_id, lastClaimUpdate?.status, lastClaimUpdate?.payout_amount, historyQuery, qc]);
 
   const refreshing = manualRefreshing;
