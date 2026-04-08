@@ -1611,7 +1611,9 @@ export default function DashboardScreen({ navigation }) {
         </>
       ) : null}
     </View>
-    <AssistantWidget onPress={() => setAssistantOpen(true)} />
+    {!disruptionSheetVisible && !simMutation.isPending ? (
+      <AssistantWidget onPress={() => setAssistantOpen(true)} />
+    ) : null}
     <AssistantModal visible={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </>
   );

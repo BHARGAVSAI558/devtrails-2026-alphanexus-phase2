@@ -72,6 +72,7 @@ export default function AssistantModal({ visible, onClose }) {
   const [message, setMessage] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [ticketText, setTicketText] = useState('');
 
   const historyQuery = useQuery({
     queryKey: ['supportHistory', userId],
@@ -119,6 +120,12 @@ export default function AssistantModal({ visible, onClose }) {
     const trimmed = String(text || '').trim();
     if (!trimmed || sendMutation.isPending) return;
     sendMutation.mutate({ text: trimmed, type, queryKey });
+  };
+  const raiseTicket = () => {
+    const txt = String(ticketText || '').trim();
+    if (!txt || sendMutation.isPending) return;
+    send(txt, 'ticket', 'raise_ticket');
+    setTicketText('');
   };
   const languagePack = assistantContent[selectedLanguage] || assistantContent.en;
 
@@ -214,6 +221,20 @@ export default function AssistantModal({ visible, onClose }) {
             ))}
           </ScrollView>
 
+          <View style={styles.ticketBox}>
+            <Text style={styles.ticketTitle}>Raise Ticket</Text>
+            <TextInput
+              style={styles.ticketInput}
+              placeholder="Describe issue for admin team..."
+              value={ticketText}
+              onChangeText={setTicketText}
+              multiline
+            />
+            <TouchableOpacity style={styles.ticketBtn} onPress={raiseTicket} disabled={sendMutation.isPending || !String(ticketText).trim()}>
+              <Text style={styles.ticketBtnText}>{sendMutation.isPending ? '...' : 'Raise Ticket'}</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
@@ -284,5 +305,35 @@ const styles = StyleSheet.create({
   input: { flex: 1, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 10, fontSize: 14 },
   send: { backgroundColor: '#1a73e8', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
   sendText: { color: '#fff', fontWeight: '800' },
+  ticketBox: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    backgroundColor: '#fff7ed',
+    borderRadius: 12,
+    padding: 10,
+  },
+  ticketTitle: { fontSize: 12, fontWeight: '900', color: '#b45309', marginBottom: 6, textTransform: 'uppercase' },
+  ticketInput: {
+    minHeight: 70,
+    borderWidth: 1,
+    borderColor: '#fdba74',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#111827',
+    textAlignVertical: 'top',
+  },
+  ticketBtn: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    backgroundColor: '#f59e0b',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  ticketBtnText: { color: '#fff', fontWeight: '900', fontSize: 12 },
 });
 

@@ -143,7 +143,7 @@ async def _demo_claim_pipeline(
     worker_id: int,
 ) -> None:
     redis = getattr(app.state, "redis", None)
-    step_delay = 1.5 if body.fast_mode else 3.0
+    step_delay = 0.05 if body.fast_mode else 1.0
 
     try:
         async with AsyncSessionLocal() as db:
@@ -314,42 +314,43 @@ async def _demo_claim_pipeline(
                 message="Your disruption claim entered verification.",
             )
 
-            await publish_claim_update(
-                redis=redis,
-                worker_id=worker_id,
-                claim_id=cid,
-                status="VERIFYING",
-                message="Checking OpenWeatherMap signal...",
-                zone_id=zone_id,
-                disruption_type=body.scenario,
-                correlation_id=run_id,
-            )
-            await asyncio.sleep(step_delay)
+            if not body.fast_mode:
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status="VERIFYING",
+                    message="Checking OpenWeatherMap signal...",
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    correlation_id=run_id,
+                )
+                await asyncio.sleep(step_delay)
 
-            await publish_claim_update(
-                redis=redis,
-                worker_id=worker_id,
-                claim_id=cid,
-                status="BEHAVIORAL_CHECK",
-                message="Analyzing your activity pattern...",
-                zone_id=zone_id,
-                disruption_type=body.scenario,
-                correlation_id=run_id,
-            )
-            await asyncio.sleep(step_delay)
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status="BEHAVIORAL_CHECK",
+                    message="Analyzing your activity pattern...",
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    correlation_id=run_id,
+                )
+                await asyncio.sleep(step_delay)
 
-            await publish_claim_update(
-                redis=redis,
-                worker_id=worker_id,
-                claim_id=cid,
-                status="FRAUD_CHECK",
-                message="GPS integrity verified ✓",
-                zone_id=zone_id,
-                disruption_type=body.scenario,
-                correlation_id=run_id,
-                fraud_score=0.1,
-            )
-            await asyncio.sleep(step_delay)
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status="FRAUD_CHECK",
+                    message="GPS integrity verified ✓",
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    correlation_id=run_id,
+                    fraud_score=0.1,
+                )
+                await asyncio.sleep(step_delay)
 
             shields = getattr(app.state, "forecast_shields", None) or {}
             fs_suffix = payout_message_suffix(
@@ -423,20 +424,24 @@ async def _demo_claim_pipeline(
                 )
             await db.commit()
             # Publish terminal state only after commit so app/web refetch sees persisted row.
-            await publish_claim_update(
-                redis=redis,
-                worker_id=worker_id,
-                claim_id=cid,
-                status=final_status,
-                message=final_message,
-                payout_amount=final_payout,
-                zone_id=zone_id,
-                disruption_type=body.scenario,
-                fraud_score=0.1,
-                correlation_id=run_id,
-                payout_breakdown=breakdown,
-                daily_coverage=daily_cap,
-            )
+            try:
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status=final_status,
+                    message=final_message,
+                    payout_amount=final_payout,
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    fraud_score=0.1,
+                    correlation_id=run_id,
+                    payout_breakdown=breakdown,
+                    daily_coverage=daily_cap,
+                )
+            except Exception:
+                # Never let WS publish failure hide a successful persisted payout.
+                pass
 
     except Exception as exc:
         log.error(

@@ -195,7 +195,6 @@ export default function ClaimsScreen() {
             </View>
             <View style={styles.msgBox}>
               <Text style={styles.msgText}>{msg}</Text>
-              <Text style={styles.elapsedText}>{elapsed} seconds elapsed</Text>
             </View>
           </>
         )}
@@ -314,7 +313,6 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   msgText: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  elapsedText: { fontSize: 13, color: '#64748b', marginTop: 8, fontWeight: '600' },
   loadingBox: { padding: 28, alignItems: 'center' },
   loadingText: { marginTop: 10, color: '#64748b', fontSize: 13 },
   errorText: { color: '#b91c1c', fontWeight: '600' },
