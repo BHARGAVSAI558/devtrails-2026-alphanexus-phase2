@@ -12,6 +12,7 @@ from app.api.v1.routes.workers import get_current_user
 from app.db.session import get_db
 from app.models.claim import ClaimLifecycle, DecisionType, Simulation
 from app.models.support import SupportQuery
+from app.models.policy import Policy
 from app.models.worker import User
 
 router = APIRouter()
@@ -54,14 +55,20 @@ def _pick(*items: str) -> str:
     return random.choice([x for x in items if x])
 
 
-def _support_values(life: ClaimLifecycle | None, sim: Simulation | None) -> dict[str, str]:
-    disruption_signal = "Moderate"
-    activity_change = "Normal"
-    fraud_check = "Clear"
-    final_status = "Under review"
-    disruption_level = "Low"
-    fraud_signals = "No major signals"
+def _support_values(
+    life: ClaimLifecycle | None,
+    sim: Simulation | None,
+    policy: Policy | None,
+) -> dict[str, str]:
+    # Defaults when we don't find a live claim row yet.
+    disruption_signal = "Not detected"
+    activity_change = "No activity change"
+    fraud_check = "Not checked"
+    final_status = "No active claim found"
+    disruption_level = "—"
+    fraud_signals = "—"
     decision = "Pending"
+    payout_amt = "0"
     if life is not None:
         st = str(life.status or "").upper()
         if st in {"VERIFYING", "BEHAVIORAL_CHECK", "FRAUD_CHECK", "REVALIDATING"}:
@@ -77,10 +84,14 @@ def _support_values(life: ClaimLifecycle | None, sim: Simulation | None) -> dict
         dec = str(sim.decision.value if hasattr(sim.decision, "value") else sim.decision).upper()
         if dec == DecisionType.FRAUD.value:
             fraud_check, fraud_signals, decision = "Flagged", "Pattern mismatch", "Fraud blocked"
+            payout_amt = str(int(round(float(sim.payout or 0.0))))
         elif dec == DecisionType.APPROVED.value:
             fraud_check, fraud_signals, decision = "Clear", "No major signals", "Approved"
+            payout_amt = str(int(round(float(sim.payout or 0.0))))
         elif dec == DecisionType.REJECTED.value:
             decision = "Rejected"
+            payout_amt = str(int(round(float(sim.payout or 0.0))))
+    coverage_active = "Yes" if policy is not None and str(getattr(policy, "status", "")).lower() == "active" else "No"
     return {
         "disruption_signal": disruption_signal,
         "activity_change": activity_change,
@@ -89,39 +100,104 @@ def _support_values(life: ClaimLifecycle | None, sim: Simulation | None) -> dict
         "disruption_level": disruption_level,
         "fraud_signals": fraud_signals,
         "decision": decision,
+        "payout_amt": payout_amt,
+        "coverage_active": coverage_active,
     }
 
 
 def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
     l = _norm_lang(lang)
-    m: dict[str, dict[str, str]] = {
+
+    # WOW-factor: multiple correct variants per question, so it never feels copy-pasted.
+    variants: dict[str, dict[str, list[str]]] = {
         "en": {
-            "no_payout": "We checked your situation carefully.\n\n• Disruption in your zone: Not strong enough\n• Your activity: Still within normal range\n\nSince both conditions were not met together, payout was not triggered.",
-            "claim_status": "Here’s your current claim status:\n\n• Disruption signal: {disruption_signal}\n• Activity change: {activity_change}\n• Fraud check: {fraud_check}\n\nFinal status: {final_status}",
-            "disruption_active": "Current zone status:\n\n• Signal strength: {disruption_signal}\n• Disruption level: {disruption_level}",
-            "payment_delayed": "Your claim is under verification. This may take up to 30 minutes.",
-            "explain_claim": "Here’s how your claim was evaluated:\n\n• Disruption detected: {disruption_signal}\n• Activity drop: {activity_change}\n• Fraud signals: {fraud_signals}\n\nDecision: {decision}",
-            "coverage": "Your coverage is active.",
+            "no_payout": [
+                "We checked your claim carefully.\n\n• Disruption impact: {disruption_signal}\n• Activity check: {activity_change}\n• Fraud safety: {fraud_check}\n\nResult: payout not triggered.",
+                "No payout this time because the system didn’t see both signals align.\n\n• Disruption: {disruption_signal}\n• Activity: {activity_change}\n• Outcome: {decision}",
+                "Payout didn’t trigger for this run.\n\nIf you believe this is wrong, ask for manual review — an admin can reply here.",
+            ],
+            "claim_status": [
+                "Here’s your current claim status:\n\n• Disruption signal: {disruption_signal}\n• Activity change: {activity_change}\n• Fraud check: {fraud_check}\n\nFinal: {final_status}",
+                "Live status snapshot:\n\n• Disruption: {disruption_signal}\n• Activity: {activity_change}\n• Safety: {fraud_check}\n\nFinal status: {final_status}",
+            ],
+            "disruption_active": [
+                "Zone disruption status right now:\n\n• Signal strength: {disruption_signal}\n• Disruption level: {disruption_level}",
+                "Disruption workflow overview:\n\n• Signal: {disruption_signal}\n• Level: {disruption_level}\n\nWe keep monitoring in real time.",
+            ],
+            "payment_delayed": [
+                "Your claim is under verification.\n\nPayout updates once verification + safety checks complete (usually within ~30 minutes).",
+                "It’s currently in the processing window.\n\nHang tight — payout shows immediately after the final decision.",
+            ],
+            "explain_claim": [
+                "How your claim was evaluated:\n\n• Disruption: {disruption_signal}\n• Activity change: {activity_change}\n• Fraud signals: {fraud_signals}\n\nDecision: {decision}",
+                "Decision breakdown:\n\n• Disruption impact: {disruption_signal}\n• Activity pattern: {activity_change}\n• Fraud safety: {fraud_signals}\n\nOutcome: {decision}",
+            ],
+            "coverage": [
+                "Coverage check: {coverage_active} ✅\n\nWe keep monitoring your zone continuously and credit payout after verification.",
+                "Your coverage is {coverage_active}.\n\nIf you share your claim status, we can explain the exact decision path.",
+            ],
         },
         "hi": {
-            "no_payout": "हमने आपकी स्थिति की जांच की।\n\n• आपके क्षेत्र में व्यवधान: पर्याप्त नहीं\n• आपकी गतिविधि: सामान्य स्तर पर\n\nदोनों शर्तें पूरी नहीं होने के कारण भुगतान नहीं हुआ।",
-            "claim_status": "यह आपके क्लेम की स्थिति है:\n\n• व्यवधान संकेत: {disruption_signal}\n• गतिविधि में बदलाव: {activity_change}\n• धोखाधड़ी जांच: {fraud_check}\n\nअंतिम स्थिति: {final_status}",
-            "disruption_active": "वर्तमान स्थिति:\n\n• संकेत स्तर: {disruption_signal}\n• व्यवधान स्तर: {disruption_level}",
-            "payment_delayed": "आपका क्लेम सत्यापन में है। इसमें 30 मिनट तक लग सकते हैं।",
-            "explain_claim": "आपके क्लेम का मूल्यांकन:\n\n• व्यवधान: {disruption_signal}\n• गतिविधि में गिरावट: {activity_change}\n• धोखाधड़ी संकेत: {fraud_signals}\n\nनिर्णय: {decision}",
-            "coverage": "आपकी कवरेज सक्रिय है।",
+            "no_payout": [
+                "हमने आपका क्लेम ध्यान से जाँचा।\n\n• व्यवधान असर: {disruption_signal}\n• गतिविधि चेक: {activity_change}\n• सुरक्षा जाँच: {fraud_check}\n\nपरिणाम: payout ट्रिगर नहीं हुआ।",
+                "इस बार payout नहीं हुआ क्योंकि सिस्टम ने दोनों signals साथ में match नहीं देखे।\n\n• व्यवधान: {disruption_signal}\n• गतिविधि: {activity_change}\n• Outcome: {decision}",
+                "इस run में payout नहीं हुआ। अगर आपको लगता है कोई गलती है, तो manual review माँगें — एडमिन जवाब दे सकता है।",
+            ],
+            "claim_status": [
+                "आपके क्लेम की वर्तमान स्थिति:\n\n• व्यवधान संकेत: {disruption_signal}\n• गतिविधि में बदलाव: {activity_change}\n• धोखाधड़ी जांच: {fraud_check}\n\nअंतिम: {final_status}",
+                "लाइव स्नैपशॉट:\n\n• व्यवधान: {disruption_signal}\n• गतिविधि: {activity_change}\n• सुरक्षा: {fraud_check}\n\nFinal status: {final_status}",
+            ],
+            "disruption_active": [
+                "अभी ज़ोन का disruption status:\n\n• संकेत स्तर: {disruption_signal}\n• व्यवधान स्तर: {disruption_level}",
+                "Disruption workflow:\n\n• Signal: {disruption_signal}\n• Level: {disruption_level}\n\nहम रियल-टाइम में मॉनिटर करते रहते हैं।",
+            ],
+            "payment_delayed": [
+                "आपका क्लेम verification में है।\n\nPayout verification + safety checks के बाद तुरंत अपडेट होता है (आमतौर पर ~30 मिनट)।",
+                "यह अभी processing विंडो में है।\n\nथोड़ा wait करें — अंतिम decision होते ही payout दिख जाएगा।",
+            ],
+            "explain_claim": [
+                "क्लेम कैसे evaluate हुआ:\n\n• व्यवधान: {disruption_signal}\n• गतिविधि बदलाव: {activity_change}\n• धोखाधड़ी संकेत: {fraud_signals}\n\nनिर्णय: {decision}",
+                "Decision breakdown:\n\n• व्यवधान असर: {disruption_signal}\n• गतिविधि पैटर्न: {activity_change}\n• Fraud safety: {fraud_signals}\n\nOutcome: {decision}",
+            ],
+            "coverage": [
+                "Coverage check: {coverage_active} ✅\n\nहम आपकी zone को लगातार मॉनिटर करते हैं और verification के बाद payout credit करते हैं।",
+                "आपका coverage {coverage_active} है।\n\nअगर आप चाहें तो claim status बताइए, हम exact decision path समझा देंगे।",
+            ],
         },
         "te": {
-            "no_payout": "మీ పరిస్థితిని పరిశీలించాము।\n\n• మీ ప్రాంతంలో అంతరాయం: తక్కువ\n• మీ కార్యకలాపం: సాధారణ స్థాయిలో ఉంది\n\nఈ రెండు షరతులు కలిసిరాకపోవడంతో చెల్లింపు జరగలేదు।",
-            "claim_status": "మీ క్లెయిమ్ స్థితి:\n\n• అంతరాయం స్థాయి: {disruption_signal}\n• కార్యకలాప మార్పు: {activity_change}\n• మోసం తనిఖీ: {fraud_check}\n\nచివరి స్థితి: {final_status}",
-            "disruption_active": "ప్రస్తుత స్థితి:\n\n• సంకేత బలం: {disruption_signal}\n• అంతరాయం స్థాయి: {disruption_level}",
-            "payment_delayed": "మీ క్లెయిమ్ పరిశీలనలో ఉంది। ఇది 30 నిమిషాల వరకు పట్టవచ్చు।",
-            "explain_claim": "మీ క్లెయిమ్ విశ్లేషణ:\n\n• అంతరాయం: {disruption_signal}\n• కార్యకలాపం తగ్గుదల: {activity_change}\n• మోసం సంకేతాలు: {fraud_signals}\n\nతీర్మానం: {decision}",
-            "coverage": "మీ కవరేజ్ సక్రియంగా ఉంది।",
+            "no_payout": [
+                "మేము మీ క్లెయిమ్‌ను జాగ్రత్తగా చెక్ చేశాం।\n\n• అంతరాయం ప్రభావం: {disruption_signal}\n• కార్యకలాప చెక్: {activity_change}\n• సేఫ్టీ చెక్: {fraud_check}\n\nఫలితం: payout ట్రిగర్ కాలేదు।",
+                "ఈసారి payout రాలేదు ఎందుకంటే రెండూ signals ఒకేసారి సరిపోలలేదు।\n\n• అంతరాయం: {disruption_signal}\n• కార్యకలాపం: {activity_change}\n• Outcome: {decision}",
+                "ఈ run లో payout లేదు. తప్పు అనిపిస్తే manual review కోరండి — అడ్మిన్ ఇక్కడే reply ఇస్తారు।",
+            ],
+            "claim_status": [
+                "మీ క్లెయిమ్ యొక్క ప్రస్తుత స్థితి:\n\n• అంతరాయం సంకేతం: {disruption_signal}\n• కార్యకలాప మార్పు: {activity_change}\n• మోసం తనిఖీ: {fraud_check}\n\nFinal: {final_status}",
+                "లైవ్ స్నాప్‌షాట్:\n\n• అంతరాయం: {disruption_signal}\n• కార్యకలాపం: {activity_change}\n• సేఫ్టీ: {fraud_check}\n\nఅంతిమ స్థితి: {final_status}",
+            ],
+            "disruption_active": [
+                "ఇప్పుడే మీ జోన్ disruption status:\n\n• సంకేత బలం: {disruption_signal}\n• అంతరాయం స్థాయి: {disruption_level}",
+                "Disruption workflow:\n\n• Signal: {disruption_signal}\n• Level: {disruption_level}\n\nమేము రియల్ టైమ్‌లో మానిటర్ చేస్తూనే ఉంటాం।",
+            ],
+            "payment_delayed": [
+                "మీ క్లెయిమ్ verification లో ఉంది।\n\nPayout verification + safety checks పూర్తయ్యాక వెంటనే అప్డేట్ అవుతుంది (సాధారణంగా ~30 నిమిషాల్లో)।",
+                "ఇప్పటికే processing విండోలో ఉంది।\n\nచివరి decision వచ్చిన వెంటనే payout కనిపిస్తుంది।",
+            ],
+            "explain_claim": [
+                "మీ క్లెయిమ్ ఎలా evaluate అయ్యింది:\n\n• అంతరాయం: {disruption_signal}\n• కార్యకలాపం: {activity_change}\n• మోసం సంకేతాలు: {fraud_signals}\n\nDecision: {decision}",
+                "Decision breakdown:\n\n• Disruption impact: {disruption_signal}\n• Activity pattern: {activity_change}\n• Fraud safety: {fraud_signals}\n\nOutcome: {decision}",
+            ],
+            "coverage": [
+                "Coverage check: {coverage_active} ✅\n\nమీ జోన్‌ను నిరంతరం మానిటర్ చేసి, verification తర్వాత payout credit చేస్తాం।",
+                "మీ coverage {coverage_active} ఉంది।\n\nమీ claim status చెప్పండి — exact decision path వివరించగలం।",
+            ],
         },
     }
-    tpl = m.get(l, m["en"]).get(key)
-    return tpl.format(**vals) if tpl else None
+
+    lang_bucket = variants.get(l, variants["en"])
+    key_bucket = lang_bucket.get(key)
+    if not key_bucket:
+        return None
+    return _pick(*[tpl.format(**vals) for tpl in key_bucket])
 
 
 def _fallback_localized(lang: str, msg: str) -> str:
@@ -294,7 +370,21 @@ async def create_support_query(
             .limit(1)
         )
     ).scalar_one_or_none()
-    sys_reply = _predefined_reply(body.language, str(body.query_key or ""), _support_values(life, sim))
+
+    pol = (
+        await db.execute(
+            select(Policy)
+            .where(Policy.user_id == uid, Policy.status == "active")
+            .order_by(Policy.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    sys_reply = _predefined_reply(
+        body.language,
+        str(body.query_key or ""),
+        _support_values(life, sim, pol),
+    )
     if not sys_reply:
         sys_reply = await _auto_system_reply(db, uid, body.message, body.language)
     row = SupportQuery(

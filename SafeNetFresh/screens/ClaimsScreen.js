@@ -123,6 +123,16 @@ export default function ClaimsScreen() {
     void qc.invalidateQueries({ queryKey: ['payoutHistory'] });
   }, [historyQuery, qc]);
 
+  useEffect(() => {
+    const st = String(lastClaimUpdate?.status || '').toUpperCase();
+    const payoutAmt = Number(lastClaimUpdate?.payout_amount ?? 0);
+    const hasPayout = Number.isFinite(payoutAmt) && payoutAmt > 0;
+    if (!hasPayout) return;
+    if (!st || (!st.includes('APPROVED') && !st.includes('PAYOUT'))) return;
+    void historyQuery.refetch();
+    void qc.invalidateQueries({ queryKey: ['payoutHistory'] });
+  }, [lastClaimUpdate?.claim_id, lastClaimUpdate?.status, lastClaimUpdate?.payout_amount, historyQuery, qc]);
+
   const refreshing = historyQuery.isRefetching;
 
   return (

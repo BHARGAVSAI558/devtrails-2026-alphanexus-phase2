@@ -733,54 +733,65 @@ export default function DashboardScreen({ navigation }) {
 
   useEffect(() => {
     const st = String(lastClaimUpdate?.status || '').toUpperCase();
-    if (st !== 'APPROVED') return;
     const cid = lastClaimUpdate?.claim_id;
-    if (cid == null || celebratedClaimIdRef.current === cid) return;
-    celebratedClaimIdRef.current = cid;
-    const amt = Number(lastClaimUpdate?.payout_amount ?? 0);
-    const breakdown = lastClaimUpdate?.payout_breakdown;
-    const expected =
-      typeof breakdown === 'object' && breakdown !== null && breakdown.expected != null
-        ? Number(breakdown.expected)
-        : null;
-    const scenario = lastClaimUpdate?.disruption_type || 'HEAVY_RAIN';
-    const rawMsg = String(lastClaimUpdate?.message || '');
-    let forecastShieldLine = null;
-    const fsIdx = rawMsg.indexOf('SafeNet predicted this risk');
-    if (fsIdx >= 0) {
-      const rest = rawMsg.slice(fsIdx);
-      const dot = rest.indexOf('.');
-      forecastShieldLine = dot >= 0 ? rest.slice(0, dot + 1).trim() : rest.trim();
+    if (!['APPROVED', 'PAYOUT_DONE', 'PAYOUT_CREDITED'].includes(st)) return;
+    if (cid == null) return;
+
+    // Only show the celebration modal on final approval (not on payout lifecycle states).
+    if (st === 'APPROVED') {
+      if (celebratedClaimIdRef.current === cid) return;
+      celebratedClaimIdRef.current = cid;
+
+      const amt = Number(lastClaimUpdate?.payout_amount ?? 0);
+      const breakdown = lastClaimUpdate?.payout_breakdown;
+      const expected =
+        typeof breakdown === 'object' && breakdown !== null && breakdown.expected != null
+          ? Number(breakdown.expected)
+          : null;
+      const scenario = lastClaimUpdate?.disruption_type || 'HEAVY_RAIN';
+      const rawMsg = String(lastClaimUpdate?.message || '');
+      let forecastShieldLine = null;
+      const fsIdx = rawMsg.indexOf('SafeNet predicted this risk');
+      if (fsIdx >= 0) {
+        const rest = rawMsg.slice(fsIdx);
+        const dot = rest.indexOf('.');
+        forecastShieldLine = dot >= 0 ? rest.slice(0, dot + 1).trim() : rest.trim();
+      }
+      setPayoutCelebration({
+        amount: amt,
+        expected: expected ?? amt,
+        scenario,
+        message: lastClaimUpdate?.message,
+        forecastShieldLine,
+      });
+      setDisruptionSheetVisible(false);
+      setSheetPhase('scenarios');
+      demoStepStatusRef.current = null;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      const base = weeklyBeforeDemoRef.current;
+      if (base != null && Number.isFinite(base)) {
+        setDisplayWeeklyProtected(base);
+        const target = base + amt;
+        const t0 = Date.now();
+        const dur = 1100;
+        const tick = () => {
+          const t = Math.min(1, (Date.now() - t0) / dur);
+          const eased = 1 - (1 - t) * (1 - t);
+          setDisplayWeeklyProtected(base + (target - base) * eased);
+          if (t < 1) requestAnimationFrame(tick);
+          else setDisplayWeeklyProtected(null);
+        };
+        requestAnimationFrame(tick);
+      }
     }
-    setPayoutCelebration({
-      amount: amt,
-      expected: expected ?? amt,
-      scenario,
-      message: lastClaimUpdate?.message,
-      forecastShieldLine,
-    });
-    setDisruptionSheetVisible(false);
-    setSheetPhase('scenarios');
-    demoStepStatusRef.current = null;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    const base = weeklyBeforeDemoRef.current;
-    if (base != null && Number.isFinite(base)) {
-      setDisplayWeeklyProtected(base);
-      const target = base + amt;
-      const t0 = Date.now();
-      const dur = 1100;
-      const tick = () => {
-        const t = Math.min(1, (Date.now() - t0) / dur);
-        const eased = 1 - (1 - t) * (1 - t);
-        setDisplayWeeklyProtected(base + (target - base) * eased);
-        if (t < 1) requestAnimationFrame(tick);
-        else setDisplayWeeklyProtected(null);
-      };
-      requestAnimationFrame(tick);
+
+    // Always refresh history/payout lists when payout has happened.
+    const amt = Number(lastClaimUpdate?.payout_amount ?? 0);
+    if (Number.isFinite(amt) && amt > 0) {
+      qc.invalidateQueries({ queryKey: ['payoutHistory'] });
+      qc.invalidateQueries({ queryKey: ['claimsHistory'] });
     }
     qc.invalidateQueries({ queryKey: ['workerProfile'] });
-    qc.invalidateQueries({ queryKey: ['payoutHistory'] });
-    qc.invalidateQueries({ queryKey: ['claimsHistory'] });
     qc.invalidateQueries({ queryKey: ['earningsDna'] });
     qc.invalidateQueries({ queryKey: ['zoneStatus'] });
     qc.invalidateQueries({ queryKey: ['forecastShield'] });
