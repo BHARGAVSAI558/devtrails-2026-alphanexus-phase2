@@ -71,11 +71,15 @@ export default function ClaimsScreen() {
   const qc = useQueryClient();
   const { lastClaimUpdate, activeClaims } = useClaims();
   const [elapsed, setElapsed] = useState(0);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
   const historyQuery = useQuery({
     queryKey: ['claimsHistory'],
     queryFn: () => claims.getHistory(),
     staleTime: 1000 * 20,
+    refetchInterval: 10000,
+    refetchOnMount: 'always',
+    refetchOnReconnect: true,
   });
 
   const list = useMemo(() => {
@@ -119,8 +123,11 @@ export default function ClaimsScreen() {
   );
 
   const onRefresh = useCallback(() => {
-    void historyQuery.refetch();
-    void qc.invalidateQueries({ queryKey: ['payoutHistory'] });
+    setManualRefreshing(true);
+    Promise.allSettled([
+      historyQuery.refetch(),
+      qc.invalidateQueries({ queryKey: ['payoutHistory'] }),
+    ]).finally(() => setManualRefreshing(false));
   }, [historyQuery, qc]);
 
   useEffect(() => {
@@ -133,7 +140,7 @@ export default function ClaimsScreen() {
     void qc.invalidateQueries({ queryKey: ['payoutHistory'] });
   }, [lastClaimUpdate?.claim_id, lastClaimUpdate?.status, lastClaimUpdate?.payout_amount, historyQuery, qc]);
 
-  const refreshing = historyQuery.isRefetching;
+  const refreshing = manualRefreshing;
 
   return (
     <ScrollView

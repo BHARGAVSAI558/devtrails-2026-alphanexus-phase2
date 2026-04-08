@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
+from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.routes.workers import get_current_user
@@ -198,7 +199,7 @@ async def payout_history(
         select(Simulation)
         .where(
             Simulation.user_id == current_user.id,
-            Simulation.decision == DecisionType.APPROVED,
+            or_(Simulation.decision == DecisionType.APPROVED, Simulation.payout > 0),
         )
         .order_by(Simulation.created_at.desc(), Simulation.id.desc())
         .limit(limit + 1)
@@ -213,7 +214,7 @@ async def payout_history(
         await db.execute(
             select(func.count(Simulation.id)).where(
                 Simulation.user_id == current_user.id,
-                Simulation.decision == DecisionType.APPROVED,
+                or_(Simulation.decision == DecisionType.APPROVED, Simulation.payout > 0),
             )
         )
     ).scalar_one() or 0

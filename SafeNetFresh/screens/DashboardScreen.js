@@ -417,6 +417,7 @@ export default function DashboardScreen({ navigation }) {
   const profileLoading = Boolean(profileQueryLoading && !workerProfile);
   const payoutsQuery = usePayoutHistory();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const notificationsQuery = useQuery({
     queryKey: ['notifications', userId],
     queryFn: () => notifications.list(String(userId || '')),
@@ -822,19 +823,18 @@ export default function DashboardScreen({ navigation }) {
     : [];
   const primaryForecastShield = forecastShields[0];
 
-  const refreshing =
-    payoutsQuery.isRefetching ||
-    zoneStatusQuery.isRefetching ||
-    dnaQuery.isRefetching ||
-    forecastShieldQuery.isRefetching ||
-    breakdownQuery.isRefetching;
+  const refreshing = manualRefreshing;
   const onRefresh = useCallback(() => {
-    void payoutsQuery.refetch();
-    void zoneStatusQuery.refetch();
-    void dnaQuery.refetch();
-    void forecastShieldQuery.refetch();
-    void breakdownQuery.refetch();
+    setManualRefreshing(true);
+    Promise.allSettled([
+      payoutsQuery.refetch(),
+      zoneStatusQuery.refetch(),
+      dnaQuery.refetch(),
+      forecastShieldQuery.refetch(),
+      breakdownQuery.refetch(),
+    ]).finally(() => setManualRefreshing(false));
   }, [
+    setManualRefreshing,
     payoutsQuery.refetch,
     zoneStatusQuery.refetch,
     dnaQuery.refetch,
@@ -1527,8 +1527,7 @@ export default function DashboardScreen({ navigation }) {
             <Text style={styles.celebrationSub}>credited to your wallet</Text>
             <View style={styles.celebrationCard}>
               <Text style={styles.celebrationExplain}>
-                Based on your earnings pattern, you typically earn ₹{Math.round(Number(payoutCelebration?.expected || 0))} at this time. The{' '}
-                {scenarioHumanPhrase(payoutCelebration?.scenario)} reduced that to ₹0. SafeNet covered your loss.
+                {scenarioHumanPhrase(payoutCelebration?.scenario)} disruption verified. Payout was credited after safety checks.
               </Text>
               {payoutCelebration?.forecastShieldLine ? (
                 <Text style={styles.celebrationShieldLine}>{payoutCelebration.forecastShieldLine}</Text>

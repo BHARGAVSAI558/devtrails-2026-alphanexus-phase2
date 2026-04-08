@@ -36,7 +36,7 @@ export default function Login() {
             <div className="mt-4 rounded-xl bg-blue-50 p-4 text-center">
               <h3 className="text-base font-semibold text-blue-900">📱 Mobile App (Recommended)</h3>
               <div className="mt-3 flex justify-center">
-                <img src="/worker-app-qr.png" alt="Worker app QR code" className="h-[190px] w-[190px] rounded-xl border border-blue-100 bg-white p-2 shadow-sm" />
+                <img src="/worker-app-qr.png" alt="Worker app QR code" className="h-[230px] w-[230px] rounded-md shadow-sm" />
               </div>
               <p className="mt-3 text-sm text-blue-800">Scan with Expo Go</p>
               <p className="mt-1 text-xs text-blue-700">Best experience: Mobile app</p>

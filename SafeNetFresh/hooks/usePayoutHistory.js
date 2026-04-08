@@ -14,6 +14,9 @@ export function usePayoutHistory() {
       return Array.isArray(rows) ? rows : [];
     },
     staleTime: 1000 * 30,
+    refetchInterval: 10000,
+    refetchOnMount: 'always',
+    refetchOnReconnect: true,
     retry: 1,
   });
 }
