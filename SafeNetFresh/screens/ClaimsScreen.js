@@ -201,12 +201,12 @@ export default function ClaimsScreen() {
         <Text style={styles.sectionLabel}>Claim history</Text>
       </View>
 
-      {historyQuery.isLoading ? (
+      {historyQuery.isLoading && list.length === 0 ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={BRAND} />
           <Text style={styles.loadingText}>Loading history…</Text>
         </View>
-      ) : historyQuery.isError ? (
+      ) : historyQuery.isError && list.length === 0 ? (
         <View style={styles.card}>
           <Text style={styles.errorText}>Could not load history. Pull to refresh.</Text>
         </View>

@@ -57,7 +57,10 @@ def _created_at_utc_z(created: datetime | None) -> str:
 
 
 def _history_row(s: Simulation) -> dict[str, Any]:
-    label, _icon = disruption_from_simulation(s)
+    try:
+        label, _icon = disruption_from_simulation(s)
+    except Exception:
+        label = "Disruption"
     ui_status = _ui_status_from_decision(s.decision)
     payout_amt = float(s.payout or 0.0) if ui_status == "APPROVED" else 0.0
     created = s.created_at
@@ -181,7 +184,13 @@ async def claim_history(
     sims = result.scalars().all()
     has_more = len(sims) > limit
     sims = sims[:limit]
-    out: List[dict[str, Any]] = [_history_row(s) for s in sims]
+    out: List[dict[str, Any]] = []
+    for s in sims:
+        try:
+            out.append(_history_row(s))
+        except Exception:
+            # Never fail the whole history response because one row is malformed.
+            continue
     next_cursor = sims[-1].id if has_more and sims else None
     return {"data": out, "next_cursor": str(next_cursor) if next_cursor is not None else None, "total_count": int(total_count)}
 

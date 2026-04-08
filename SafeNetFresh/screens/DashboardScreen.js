@@ -757,9 +757,11 @@ export default function DashboardScreen({ navigation }) {
     const cid = lastClaimUpdate?.claim_id;
     if (!['APPROVED', 'PAYOUT_DONE', 'PAYOUT_CREDITED'].includes(st)) return;
     if (cid == null) return;
+    const evtTs = Date.parse(String(lastClaimUpdate?.timestamp || lastClaimUpdate?.created_at || ''));
+    const isFreshEvent = Number.isFinite(evtTs) ? Date.now() - evtTs < 45_000 : false;
 
     // Only show the celebration modal on final approval (not on payout lifecycle states).
-    if (st === 'APPROVED') {
+    if (st === 'APPROVED' && isFreshEvent) {
       if (celebratedClaimIdRef.current === cid) return;
       celebratedClaimIdRef.current = cid;
 
