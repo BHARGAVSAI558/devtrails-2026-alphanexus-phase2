@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.models.notification import Notification
 
@@ -11,6 +12,24 @@ async def create_notification(
     title: str,
     message: str,
 ) -> Notification:
+    # Prevent noisy duplicate notifications for the same event text.
+    prev = (
+        await db.execute(
+            select(Notification)
+            .where(
+                Notification.user_id == int(user_id),
+                Notification.type == str(ntype or "system"),
+                Notification.title == str(title or "SafeNet update")[:160],
+                Notification.message == str(message or ""),
+                Notification.is_read.is_(False),
+            )
+            .order_by(Notification.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if prev is not None:
+        return prev
+
     row = Notification(
         user_id=int(user_id),
         type=str(ntype or "system"),

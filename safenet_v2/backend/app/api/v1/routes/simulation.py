@@ -280,6 +280,7 @@ async def _demo_claim_pipeline(
                         if already_paid_this_disruption
                         else (
                             f"No verified {body.scenario.replace('_', ' ').lower()} disruption in {zone_label} right now"
+                            + f". Active disruption now: {active_scenario.replace('_', ' ').title()}"
                             if not scenario_allowed_today
                             else f"No live disruption found in {zone_label} during this check"
                         )
@@ -367,6 +368,7 @@ async def _demo_claim_pipeline(
                         if already_paid_this_disruption
                         else (
                             f"No verified {body.scenario.replace('_', ' ').lower()} disruption in {zone_label} right now."
+                            + f" Active disruption now: {active_scenario.replace('_', ' ').title()}."
                             if not scenario_allowed_today
                             else f"No confirmed disruption in {zone_label}. Monitoring continues in real time."
                         )
@@ -428,6 +430,7 @@ async def _demo_claim_pipeline(
                         if already_paid_this_disruption
                         else (
                             f"No verified {body.scenario.replace('_', ' ').lower()} disruption in your area right now."
+                            + f" Active disruption now: {active_scenario.replace('_', ' ').title()}."
                             if not scenario_allowed_today
                             else "No verified disruption this run. SafeNet is still monitoring your zone."
                         )

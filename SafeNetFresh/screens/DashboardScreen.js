@@ -1494,7 +1494,7 @@ export default function DashboardScreen({ navigation }) {
                     <Text style={styles.scenarioEmoji}>{s.emoji}</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.scenarioTitle, { color: colors.text }]}>
-                        {s.value === activeScenario ? '🔴 ' : ''}{s.label}
+                        {s.label} {s.value === activeScenario ? '🔴' : '🟢'}
                       </Text>
                       <Text style={[styles.scenarioHint, { color: colors.muted }]}>{s.hint}</Text>
                     </View>

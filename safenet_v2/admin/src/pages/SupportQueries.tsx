@@ -12,6 +12,8 @@ type SupportRow = {
   reply: string;
   admin_reply?: string | null;
   status: 'open' | 'resolved';
+  query_type?: string;
+  ticket_no?: string | null;
   created_at?: string | null;
 };
 
@@ -57,6 +59,8 @@ export default function SupportQueries() {
         <table style={{ ...adminUi.table, minWidth: 1040 }}>
           <thead>
             <tr>
+              <th style={adminUi.th}>Ticket</th>
+              <th style={adminUi.th}>Type</th>
               <th style={adminUi.th}>User ID</th>
               <th style={adminUi.th}>Message</th>
               <th style={adminUi.th}>System Response</th>
@@ -68,6 +72,12 @@ export default function SupportQueries() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
+                <td style={adminUi.td}>{r.ticket_no || `Q-${r.id}`}</td>
+                <td style={adminUi.td}>
+                  <span style={{ ...adminUi.pill, background: r.query_type === 'ticket' ? 'rgba(30,64,175,0.18)' : 'rgba(22,163,74,0.14)' }}>
+                    {r.query_type || 'custom'}
+                  </span>
+                </td>
                 <td style={adminUi.td}>{r.user_id}</td>
                 <td style={adminUi.td}>{r.message}</td>
                 <td style={adminUi.td}>{r.reply}</td>
@@ -110,7 +120,7 @@ export default function SupportQueries() {
             ))}
             {!rows.length ? (
               <tr>
-                <td colSpan={6} style={adminUi.td}>
+                <td colSpan={8} style={adminUi.td}>
                   <div style={adminUi.empty}>{q.isLoading ? 'Loading…' : 'No support queries yet.'}</div>
                 </td>
               </tr>

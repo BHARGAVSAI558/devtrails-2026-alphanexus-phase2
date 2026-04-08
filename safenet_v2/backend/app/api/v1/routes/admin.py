@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -937,7 +937,7 @@ async def list_support_queries(
 ):
     stmt = (
         select(SupportQuery)
-        .where(SupportQuery.query_type == "custom")
+        .where(or_(SupportQuery.query_type == "custom", SupportQuery.query_type == "ticket"))
         .order_by(SupportQuery.created_at.desc(), SupportQuery.id.desc())
         .limit(500)
     )
@@ -952,6 +952,8 @@ async def list_support_queries(
             "reply": r.system_response,
             "admin_reply": r.admin_reply,
             "status": r.status,
+            "query_type": r.query_type,
+            "ticket_no": f"TKT-{int(r.id):06d}" if str(r.query_type) == "ticket" else None,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows

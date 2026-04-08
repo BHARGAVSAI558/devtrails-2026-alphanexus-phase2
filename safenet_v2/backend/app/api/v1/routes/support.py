@@ -107,6 +107,21 @@ def _support_values(
 
 def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
     l = _norm_lang(lang)
+    if str(key or "").lower() == "raise_ticket":
+        if l == "hi":
+            return _pick(
+                "सपोर्ट टिकट सफलतापूर्वक दर्ज हो गया है। हमारी टीम जल्द ही यहीं उत्तर देगी।",
+                "आपका टिकट सबमिट हो गया है। एडमिन का जवाब इसी चैट में मिलेगा।",
+            )
+        if l == "te":
+            return _pick(
+                "సపోర్ట్ టికెట్ విజయవంతంగా నమోదు అయింది. మా టీమ్ త్వరలో ఇక్కడే సమాధానం ఇస్తుంది.",
+                "మీ టికెట్ సమర్పించబడింది. అడ్మిన్ స్పందన ఈ చాట్‌లోనే కనిపిస్తుంది.",
+            )
+        return _pick(
+            "Support ticket created successfully. Our team will respond here shortly.",
+            "Ticket submitted. You will receive an admin reply in this chat soon.",
+        )
 
     # WOW-factor: multiple correct variants per question, so it never feels copy-pasted.
     variants: dict[str, dict[str, list[str]]] = {
@@ -387,18 +402,35 @@ async def create_support_query(
     )
     if not sys_reply:
         sys_reply = await _auto_system_reply(db, uid, body.message, body.language)
+    is_ticket = str(body.type or "").lower() == "ticket" or str(body.query_key or "").lower() == "raise_ticket"
     row = SupportQuery(
         user_id=uid,
         message=body.message.strip(),
-        query_type="predefined" if str(body.type).lower() == "predefined" else "custom",
+        query_type=(
+            "ticket"
+            if is_ticket
+            else ("predefined" if str(body.type).lower() == "predefined" else "custom")
+        ),
         system_response=sys_reply,
         admin_reply=None,
         status="open",
     )
     db.add(row)
     await db.flush()
+    ticket_no = f"TKT-{int(row.id):06d}"
+    if is_ticket:
+        l = _norm_lang(body.language)
+        row.system_response = (
+            f"Ticket {ticket_no} created successfully. Priority: Normal. Our team will respond soon."
+            if l == "en"
+            else (
+                f"टिकट {ticket_no} सफलतापूर्वक बन गया है। प्राथमिकता: सामान्य। हमारी टीम जल्द उत्तर देगी।"
+                if l == "hi"
+                else f"టికెట్ {ticket_no} విజయవంతంగా సృష్టించబడింది. ప్రాధాన్యత: సాధారణం. మా టీమ్ త్వరలో స్పందిస్తుంది."
+            )
+        )
     await db.commit()
-    return {"ok": True, "id": row.id}
+    return {"ok": True, "id": row.id, "ticket_no": ticket_no if is_ticket else None}
 
 
 @router.get("/history")
@@ -424,6 +456,8 @@ async def support_history(
             "reply": r.system_response,
             "admin_reply": r.admin_reply,
             "status": r.status,
+            "query_type": r.query_type,
+            "ticket_no": f"TKT-{int(r.id):06d}" if str(r.query_type) == "ticket" else None,
             "created_at": _as_utc_iso(r.created_at),
         }
         for r in rows

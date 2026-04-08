@@ -9,6 +9,9 @@ import { useAuth } from '../contexts/AuthContext';
 const assistantContent = {
   en: {
     label: 'English',
+    title: 'Support Assistant',
+    close: 'Close',
+    send: 'Send',
     queries: [
       { key: 'no_payout', text: "Why didn’t I get payout?" },
       { key: 'claim_status', text: 'Check my claim status' },
@@ -16,11 +19,16 @@ const assistantContent = {
       { key: 'payment_delayed', text: 'Payment delayed?' },
       { key: 'explain_claim', text: 'Explain my claim' },
       { key: 'coverage', text: 'Am I covered?' },
+      { key: 'raise_ticket', text: 'Raise a support ticket' },
     ],
     placeholder: 'Type your message...',
+    empty: 'Ask a question. Support and admin replies will appear here.',
   },
   hi: {
     label: 'हिन्दी',
+    title: 'सहायता सहायक',
+    close: 'बंद करें',
+    send: 'भेजें',
     queries: [
       { key: 'no_payout', text: 'मुझे भुगतान क्यों नहीं मिला?' },
       { key: 'claim_status', text: 'मेरे क्लेम की स्थिति क्या है?' },
@@ -28,11 +36,16 @@ const assistantContent = {
       { key: 'payment_delayed', text: 'भुगतान में देरी क्यों है?' },
       { key: 'explain_claim', text: 'मेरे क्लेम की जानकारी बताएं' },
       { key: 'coverage', text: 'क्या मैं अभी कवर में हूँ?' },
+      { key: 'raise_ticket', text: 'सपोर्ट टिकट बनाएं' },
     ],
     placeholder: 'अपना संदेश लिखें...',
+    empty: 'अपना प्रश्न भेजें। सपोर्ट और एडमिन के जवाब यहां दिखेंगे।',
   },
   te: {
     label: 'తెలుగు',
+    title: 'సపోర్ట్ అసిస్టెంట్',
+    close: 'మూసివేయి',
+    send: 'పంపు',
     queries: [
       { key: 'no_payout', text: 'నాకు చెల్లింపు ఎందుకు రాలేదు?' },
       { key: 'claim_status', text: 'నా క్లెయిమ్ స్థితి ఏమిటి?' },
@@ -40,8 +53,10 @@ const assistantContent = {
       { key: 'payment_delayed', text: 'చెల్లింపు ఆలస్యం ఎందుకు?' },
       { key: 'explain_claim', text: 'నా క్లెయిమ్ వివరాలు చెప్పండి' },
       { key: 'coverage', text: 'నేను ప్రస్తుతం కవర్లో ఉన్నానా?' },
+      { key: 'raise_ticket', text: 'సపోర్ట్ టికెట్ నమోదు చేయండి' },
     ],
     placeholder: 'మీ సందేశాన్ని టైప్ చేయండి...',
+    empty: 'మీ ప్రశ్నను పంపండి. సపోర్ట్/అడ్మిన్ సమాధానాలు ఇక్కడ కనిపిస్తాయి.',
   },
 };
 
@@ -106,13 +121,13 @@ export default function AssistantModal({ visible, onClose }) {
       <View style={styles.wrap}>
         <View style={styles.card}>
           <View style={styles.head}>
-            <Text style={styles.title}>Support Assistant</Text>
+            <Text style={styles.title}>{languagePack.title}</Text>
             <View style={styles.headActions}>
               <TouchableOpacity style={styles.langBtn} onPress={() => setLanguageOpen((v) => !v)}>
                 <Text style={styles.langBtnText}>🌐 {languagePack.label}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={onClose}>
-                <Text style={styles.close}>Close</Text>
+                <Text style={styles.close}>{languagePack.close}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -143,7 +158,7 @@ export default function AssistantModal({ visible, onClose }) {
             {historyQuery.isLoading ? (
               <ActivityIndicator color="#1a73e8" />
             ) : items.length === 0 ? (
-              <Text style={styles.empty}>Ask a question. Support and admin replies will appear here.</Text>
+              <Text style={styles.empty}>{languagePack.empty}</Text>
             ) : (
               items.map((row, idx) => {
                 const created = new Date(row?.created_at || Date.now());
@@ -183,7 +198,11 @@ export default function AssistantModal({ visible, onClose }) {
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
             {languagePack.queries.map((q) => (
-              <TouchableOpacity key={`${selectedLanguage}-${q.key}`} style={styles.quickBtn} onPress={() => send(q.text, 'predefined', q.key)}>
+              <TouchableOpacity
+                key={`${selectedLanguage}-${q.key}`}
+                style={styles.quickBtn}
+                onPress={() => send(q.text, q.key === 'raise_ticket' ? 'ticket' : 'predefined', q.key)}
+              >
                 <Text style={styles.quickText}>{q.text}</Text>
               </TouchableOpacity>
             ))}
@@ -197,7 +216,7 @@ export default function AssistantModal({ visible, onClose }) {
               onChangeText={setMessage}
             />
             <TouchableOpacity style={styles.send} onPress={() => send(message)}>
-              <Text style={styles.sendText}>{sendMutation.isPending ? '...' : 'Send'}</Text>
+              <Text style={styles.sendText}>{sendMutation.isPending ? '...' : languagePack.send}</Text>
             </TouchableOpacity>
           </View>
         </View>
