@@ -481,14 +481,16 @@ export default function DashboardScreen({ navigation }) {
   const [approvalToast, setApprovalToast] = useState(null);
   const approvalSlide = useRef(new Animated.Value(-140)).current;
   const lastApprovedIdRef = useRef(null);
+  const approvalHideTimerRef = useRef(null);
   const zoneStressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const id = lastClaimUpdate?.claim_id;
     const st = String(lastClaimUpdate?.status || '').toUpperCase();
     if (st !== 'APPROVED' || id == null) return;
-    if (lastApprovedIdRef.current === id) return;
-    lastApprovedIdRef.current = id;
+    const cid = String(id);
+    if (lastApprovedIdRef.current === cid) return;
+    lastApprovedIdRef.current = cid;
     const amt = Number(lastClaimUpdate?.payout_amount ?? 0);
     const label = formatDisruptionLabel(lastClaimUpdate?.disruption_type);
     const toastMsg = String(lastClaimUpdate?.message || '');
@@ -503,13 +505,31 @@ export default function DashboardScreen({ navigation }) {
     setApprovalToast({ amount: amt, disruption: label, shieldLine: shieldToastLine });
     approvalSlide.setValue(-140);
     Animated.spring(approvalSlide, { toValue: 0, friction: 7, tension: 80, useNativeDriver: true }).start();
-    const t = setTimeout(() => {
-      Animated.timing(approvalSlide, { toValue: -140, duration: 240, useNativeDriver: true }).start(() =>
-        setApprovalToast(null)
-      );
-    }, 3000);
-    return () => clearTimeout(t);
+    if (approvalHideTimerRef.current) clearTimeout(approvalHideTimerRef.current);
+    const hide = () => {
+      Animated.timing(approvalSlide, { toValue: -140, duration: 240, useNativeDriver: true }).start(() => {
+        setApprovalToast(null);
+        approvalSlide.setValue(-140);
+      });
+    };
+    // Primary auto-hide + hard safety hide (prevents “stuck” toast).
+    approvalHideTimerRef.current = setTimeout(hide, 3200);
+    const safety = setTimeout(hide, 9000);
+    return () => {
+      if (approvalHideTimerRef.current) clearTimeout(approvalHideTimerRef.current);
+      clearTimeout(safety);
+    };
   }, [lastClaimUpdate, approvalSlide]);
+
+  useEffect(() => {
+    // If backend/UI sends follow-up statuses, don’t leave the toast pinned.
+    const st = String(lastClaimUpdate?.status || '').toUpperCase();
+    if (!approvalToast) return;
+    if (st && st !== 'APPROVED' && st !== 'PAYOUT_DONE' && st !== 'PAYOUT_CREDITED') {
+      setApprovalToast(null);
+      approvalSlide.setValue(-140);
+    }
+  }, [lastClaimUpdate?.status, approvalToast, approvalSlide]);
 
   useEffect(() => {
     if (!disruptionAlert?.visible) return;
