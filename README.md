@@ -47,7 +47,7 @@ Install Expo Go and scan this QR:
 ![SafeNet Worker App QR](safenet_v2/admin/public/worker-app-qr.png)
 
 Fallback:
-`exp+://expo-development-client/?url=https%3A%2F%2Fu.expo.dev%2F2d45889e-9415-4966-be7f-ba2711a57f13%2Fgroup%2F1a3df0cf-e275-43ef-8d1e-3b1268b67a3f`
+`exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/598be6e8-b9b4-4239-8124-7b5ff779a7be`
 
 ### Option 3 — Run locally
 ```bash
@@ -64,18 +64,37 @@ npm install && npm start
 - **Forecast Shield**: proactive cover upgrades before forecasted risk windows
 - **Zero-touch claims**: disruption detect → verify → fraud checks → decision
 - **4-layer fraud engine**: GPS integrity, cross-signal checks, cluster/ring checks, enrollment anomalies
-- **In-app multilingual assistant**: English, Hindi, Telugu with admin reply loop
+- **Multilingual support assistant (queries/help)**: English, Hindi, Telugu with admin reply loop
+
+---
+
+## 🏆 Why SafeNet Can Win
+
+- **Solves a real India-scale pain**: gig workers lose daily income due to rain, heat, AQI, and curfews.
+- **End-to-end product, not a prototype**: worker app + admin control center + live backend + real-time sync.
+- **Fast evaluator journey**: login, simulate disruption, see payout + fraud + support flow within minutes.
+- **Trust-first design**: deterministic payouts, anti-repeat payout guard, fraud screening, and audit-friendly admin view.
+- **Operational depth**: zone heatmaps, pooled vs paid metrics, support ticket workflows (EN/HI/TE in assistant), and notifications.
+- **Production-minded architecture**: modular FastAPI services, WebSocket updates, and extensible policy/fraud engines.
 
 ---
 
 ## 🆕 Recent Product Updates
 
-- Assistant now supports **language switch** (`🌐`) for EN/HI/TE
+- Support Assistant now supports **language switch** (`🌐`) for EN/HI/TE (queries/help module)
 - Predefined queries return **correct mapped responses** per language
-- Only **custom typed support messages** go to admin queue (predefined excluded)
+- Added dedicated **Raise Ticket** action with highlighted ticket flow in assistant
+- Support now includes **ticket IDs** (`TKT-xxxxxx`) and admin ticket queue visibility
+- Only **custom/ticket support messages** go to admin queue (predefined excluded)
 - Earnings DNA simplified to quick snapshot: live status, heatmap, next peak, today potential, week progress
-- Demo payouts follow realistic cadence and deterministic amounts
+- Demo payouts now use **deterministic anti-repeat logic** (already-paid guard)
+- Disruption selector now shows **active scenario indicator** (red/green guidance)
+- Claims/Recent Payouts include **notification fallback sync** for stronger reliability
+- Notification feed now has **duplicate suppression** to avoid repeated payout spam
+- Fast demo mode supports **instant payout UX** (reduced waiting pipeline for evaluator runs)
 - Admin KPIs include pooled vs paid weekly visibility
+- Admin zone heatmap now uses stronger **red/orange/green risk thresholds**
+- Admin login and support pages upgraded with cleaner professional UI
 
 ---
 
@@ -169,6 +188,9 @@ npm run dev
 - **Earnings DNA** — quick earnings snapshot with live demand, next peak window, today potential, and week progress
 - **Disruption demo payouts** — `payout_engine.compute_demo_dna_payout` models ₹/hr at risk (capped by tier), with guards so repeated tiny demo runs or quiet IST hours do not produce meaningless ₹4-style credits (see `safenet_v2/backend/app/engines/payout_engine.py`)
 - **Support + notifications loop** — floating assistant, support history, admin replies, and notification center (admin-reply focused user alerts)
+- **Ticket operations** — professional raise-ticket flow, unique ticket IDs, and admin resolution loop
+- **Payout consistency guards** — no-repeat payout per disruption window, sync-safe history fallback, and de-duplicated notifications
+- **Evaluator-friendly demo mode** — fast disruption-to-payout flow, clean success toasts, and reduced waiting friction
 
 ---
 

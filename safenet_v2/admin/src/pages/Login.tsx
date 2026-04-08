@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const navigate = useNavigate();
   const workerAppUrl = 'https://safenet-sage.vercel.app';
+  const expoDeepLink = 'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/598be6e8-b9b4-4239-8124-7b5ff779a7be';
   const goToAdminLogin = () => {
     navigate('/admin-login', {
       state: { username: 'admin', password: 'admin123' },
@@ -40,6 +41,14 @@ export default function Login() {
               </div>
               <p className="mt-3 text-sm text-blue-800">Scan with Expo Go</p>
               <p className="mt-1 text-xs text-blue-700">Best experience: Mobile app</p>
+              <a
+                href={expoDeepLink}
+                className="mt-2 inline-block text-xs font-semibold text-blue-700 underline underline-offset-2"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open Expo link directly
+              </a>
             </div>
             <div className="mt-6 border-t border-slate-200 pt-4">
               <h3 className="text-sm font-semibold text-slate-800">🌐 Web Version</h3>
