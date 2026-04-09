@@ -83,13 +83,27 @@ def _support_values(
     if sim is not None:
         dec = str(sim.decision.value if hasattr(sim.decision, "value") else sim.decision).upper()
         if dec == DecisionType.FRAUD.value:
+            disruption_signal = "Detected"
+            activity_change = "Anomalous pattern"
             fraud_check, fraud_signals, decision = "Flagged", "Pattern mismatch", "Fraud blocked"
+            final_status = "Blocked"
+            disruption_level = "High"
             payout_amt = str(int(round(float(sim.payout or 0.0))))
         elif dec == DecisionType.APPROVED.value:
+            disruption_signal = "Detected"
+            activity_change = "Drop observed"
             fraud_check, fraud_signals, decision = "Clear", "No major signals", "Approved"
+            final_status = "Approved"
+            disruption_level = "High"
             payout_amt = str(int(round(float(sim.payout or 0.0))))
         elif dec == DecisionType.REJECTED.value:
+            disruption_signal = "Weak"
+            activity_change = "Near normal"
+            fraud_check = "Clear"
+            fraud_signals = "No payout conditions met"
             decision = "Rejected"
+            final_status = "Rejected"
+            disruption_level = "Low"
             payout_amt = str(int(round(float(sim.payout or 0.0))))
     coverage_active = "Yes" if policy is not None and str(getattr(policy, "status", "")).lower() == "active" else "No"
     return {
@@ -206,6 +220,10 @@ def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
                 "Your claim is under verification.\n\nPayout updates once verification + safety checks complete (usually within ~30 minutes).",
                 "It’s currently in the processing window.\n\nHang tight — payout shows immediately after the final decision.",
             ],
+            "payout_calc": [
+                "Payout formula:\n\n• Zone disruption severity in your area\n• Your Earnings DNA for that day/hour slot\n• Activity drop during disruption\n• Policy tier cap\n\nFinal payout = verified loss for that slot, capped by your daily tier limit.",
+                "SafeNet calculates payout from your real context:\n\n• Area risk level\n• DNA-based expected earnings\n• Disruption duration and impact\n• Fraud/safety validation\n\nThen it credits the eligible amount (up to your coverage cap).",
+            ],
             "explain_claim": [
                 "How your claim was evaluated:\n\n• Disruption: {disruption_signal}\n• Activity change: {activity_change}\n• Fraud signals: {fraud_signals}\n\nDecision: {decision}",
                 "Decision breakdown:\n\n• Disruption impact: {disruption_signal}\n• Activity pattern: {activity_change}\n• Fraud safety: {fraud_signals}\n\nOutcome: {decision}",
@@ -235,6 +253,10 @@ def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
             "payment_delayed": [
                 "आपका क्लेम verification में है।\n\nPayout verification + safety checks के बाद तुरंत अपडेट होता है (आमतौर पर ~30 मिनट)।",
                 "यह अभी processing विंडो में है।\n\nथोड़ा wait करें — अंतिम decision होते ही payout दिख जाएगा।",
+            ],
+            "payout_calc": [
+                "Payout गणना का आधार:\n\n• आपके area का disruption स्तर\n• उस समय का आपका Earnings DNA\n• disruption के दौरान activity drop\n• आपके policy tier की cap\n\nFinal payout = verified loss, लेकिन tier limit तक।",
+                "SafeNet payout ऐसे निकालता है:\n\n• क्षेत्रीय जोखिम स्तर\n• DNA से expected earning\n• disruption duration + impact\n• safety/fraud validation\n\nफिर eligible amount तुरंत credit होता है (coverage cap तक)।",
             ],
             "explain_claim": [
                 "क्लेम कैसे evaluate हुआ:\n\n• व्यवधान: {disruption_signal}\n• गतिविधि बदलाव: {activity_change}\n• धोखाधड़ी संकेत: {fraud_signals}\n\nनिर्णय: {decision}",
@@ -266,6 +288,10 @@ def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
                 "మీ క్లెయిమ్ verification లో ఉంది।\n\nPayout verification + safety checks పూర్తయ్యాక వెంటనే అప్డేట్ అవుతుంది (సాధారణంగా ~30 నిమిషాల్లో)।",
                 "ఇప్పటికే processing విండోలో ఉంది।\n\nచివరి decision వచ్చిన వెంటనే payout కనిపిస్తుంది।",
             ],
+            "payout_calc": [
+                "Payout గణన ఇలా జరుగుతుంది:\n\n• మీ ప్రాంతంలో disruption స్థాయి\n• ఆ రోజు/సమయానికి Earnings DNA\n• disruption సమయంలో activity drop\n• policy tier cap\n\nFinal payout = ఆ slot verified loss, కానీ tier పరిమితి వరకు మాత్రమే.",
+                "SafeNet payoutను real signals ఆధారంగా లెక్కిస్తుంది:\n\n• area risk level\n• DNA expected earning\n• disruption duration + impact\n• safety/fraud validation\n\nతర్వాత eligible amount coverage cap వరకు credit అవుతుంది.",
+            ],
             "explain_claim": [
                 "మీ క్లెయిమ్ ఎలా evaluate అయ్యింది:\n\n• అంతరాయం: {disruption_signal}\n• కార్యకలాపం: {activity_change}\n• మోసం సంకేతాలు: {fraud_signals}\n\nDecision: {decision}",
                 "Decision breakdown:\n\n• Disruption impact: {disruption_signal}\n• Activity pattern: {activity_change}\n• Fraud safety: {fraud_signals}\n\nOutcome: {decision}",
@@ -290,20 +316,20 @@ def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
 def _fallback_localized(lang: str, msg: str) -> str:
     t = msg.lower()
     l = _norm_lang(lang)
-    if "payout" in t or "payment" in t or "भुगतान" in t or "చెల్లింపు" in t:
+    if "payout" in t or "payment" in t or "calculate" in t or "calculated" in t or "भुगतान" in t or "చెల్లింపు" in t:
         if l == "hi":
             return _pick(
-                "भुगतान निर्णय व्यवधान सत्यापन, धोखाधड़ी जांच और आपके अर्निंग पैटर्न पर आधारित है।",
-                "पAYOUT तभी ट्रिगर होता है जब व्यवधान + गतिविधि संकेत + सुरक्षा जांच एक साथ पास हों।",
+                "भुगतान गणना = area disruption level + आपका Earnings DNA + activity drop + policy cap.",
+                "PAYOUT तभी ट्रिगर होता है जब व्यवधान + गतिविधि संकेत + सुरक्षा जांच एक साथ पास हों, फिर tier cap तक राशि credit होती है।",
             )
         if l == "te":
             return _pick(
-                "చెల్లింపు నిర్ణయం అంతరాయం ధృవీకరణ, మోసం తనిఖీలు మరియు మీ earning pattern ఆధారంగా ఉంటుంది.",
-                "అంతరాయం + కార్యకలాప మార్పు + భద్రతా తనిఖీలు పాస్ అయితేనే payout వస్తుంది.",
+                "చెల్లింపు గణన = area disruption level + Earnings DNA + activity drop + policy cap.",
+                "అంతరాయం + కార్యకలాప మార్పు + భద్రతా తనిఖీలు పాస్ అయితేనే payout వస్తుంది, తర్వాత tier cap వరకు credit అవుతుంది.",
             )
         return _pick(
-            "Payout is based on disruption verification, fraud checks, and your earning pattern for that slot.",
-            "Payout triggers only when disruption + activity shift + safety checks pass together.",
+            "Payout is calculated from area disruption severity, your Earnings DNA slot value, activity drop, and tier cap.",
+            "Payout triggers only when disruption + activity shift + safety checks pass together, then eligible amount is credited up to your policy cap.",
         )
     if "claim" in t or "क्लेम" in t or "క్లెయిమ్" in t:
         if l == "hi":

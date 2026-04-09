@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -29,6 +29,7 @@ const assistantContent = {
       { key: 'claim_status', text: 'Check my claim status' },
       { key: 'disruption_active', text: 'Is disruption active?' },
       { key: 'payment_delayed', text: 'Payment delayed?' },
+      { key: 'payout_calc', text: 'How is payout calculated?' },
       { key: 'explain_claim', text: 'Explain my claim' },
       { key: 'coverage', text: 'Am I covered?' },
       { key: 'show_histories', text: 'Show my histories' },
@@ -49,6 +50,7 @@ const assistantContent = {
       { key: 'claim_status', text: 'मेरे क्लेम की स्थिति क्या है?' },
       { key: 'disruption_active', text: 'क्या अभी व्यवधान सक्रिय है?' },
       { key: 'payment_delayed', text: 'भुगतान में देरी क्यों है?' },
+      { key: 'payout_calc', text: 'भुगतान कैसे गणना होता है?' },
       { key: 'explain_claim', text: 'मेरे क्लेम की जानकारी बताएं' },
       { key: 'coverage', text: 'क्या मैं अभी कवर में हूँ?' },
       { key: 'show_histories', text: 'मेरी हिस्ट्री दिखाएं' },
@@ -69,6 +71,7 @@ const assistantContent = {
       { key: 'claim_status', text: 'నా క్లెయిమ్ స్థితి ఏమిటి?' },
       { key: 'disruption_active', text: 'ప్రస్తుతం అంతరాయం ఉందా?' },
       { key: 'payment_delayed', text: 'చెల్లింపు ఆలస్యం ఎందుకు?' },
+      { key: 'payout_calc', text: 'చెల్లింపు ఎలా గణించబడుతుంది?' },
       { key: 'explain_claim', text: 'నా క్లెయిమ్ వివరాలు చెప్పండి' },
       { key: 'coverage', text: 'నేను ప్రస్తుతం కవర్లో ఉన్నానా?' },
       { key: 'show_histories', text: 'నా హిస్టరీ చూపించు' },
@@ -89,6 +92,7 @@ export default function AssistantModal({ visible, onClose }) {
   const [languageOpen, setLanguageOpen] = useState(false);
   const [ticketText, setTicketText] = useState('');
   const [ticketOpen, setTicketOpen] = useState(false);
+  const historyRef = useRef(null);
 
   const historyQuery = useQuery({
     queryKey: ['supportHistory', userId],
@@ -145,6 +149,14 @@ export default function AssistantModal({ visible, onClose }) {
   };
   const languagePack = assistantContent[selectedLanguage] || assistantContent.en;
 
+  useEffect(() => {
+    if (!visible) return undefined;
+    const t = setTimeout(() => {
+      historyRef.current?.scrollToEnd?.({ animated: true });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [visible, items.length, ticketOpen, languageOpen]);
+
   return (
     <AppModal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.wrap} onPress={Keyboard.dismiss}>
@@ -197,10 +209,12 @@ export default function AssistantModal({ visible, onClose }) {
           ) : null}
 
           <ScrollView
+            ref={historyRef}
             style={styles.history}
             contentContainerStyle={styles.historyContent}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            onContentSizeChange={() => historyRef.current?.scrollToEnd?.({ animated: false })}
           >
             {historyQuery.isLoading ? (
               <ActivityIndicator color="#1a73e8" />
@@ -306,7 +320,14 @@ export default function AssistantModal({ visible, onClose }) {
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
   keyboardWrap: { width: '100%' },
-  card: { backgroundColor: '#fff', borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '90%', padding: 14 },
+  card: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    height: '90%',
+    maxHeight: '90%',
+    padding: 14,
+  },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   headActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -335,8 +356,8 @@ const styles = StyleSheet.create({
   langItemTextActive: { color: '#1d4ed8', fontWeight: '800' },
   title: { fontSize: 18, fontWeight: '900', color: '#0f172a' },
   close: { color: '#1a73e8', fontWeight: '700' },
-  history: { marginTop: 10, maxHeight: 380 },
-  historyContent: { paddingBottom: 8 },
+  history: { marginTop: 10, flex: 1, minHeight: 120 },
+  historyContent: { paddingBottom: 12 },
   dayPillWrap: { alignItems: 'center', marginVertical: 4 },
   dayPillText: {
     fontSize: 11,
@@ -362,7 +383,7 @@ const styles = StyleSheet.create({
   quickRow: { gap: 8, paddingVertical: 8 },
   quickBtn: { borderRadius: 999, borderWidth: 1, borderColor: '#dbeafe', backgroundColor: '#eff6ff', paddingVertical: 6, paddingHorizontal: 10 },
   quickText: { color: '#1d4ed8', fontSize: 12, fontWeight: '700' },
-  inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 6 },
+  inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 8, marginBottom: 4 },
   input: { flex: 1, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 10, fontSize: 14 },
   send: { backgroundColor: '#1a73e8', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
   sendText: { color: '#fff', fontWeight: '800' },
