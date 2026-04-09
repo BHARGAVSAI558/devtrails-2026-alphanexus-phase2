@@ -21,10 +21,11 @@ import { useAuth } from '../contexts/AuthContext';
 const assistantContent = {
   en: {
     label: 'English',
-    title: 'Support Assistant',
+    title: 'Support',
     close: 'Close',
     send: 'Send',
     queries: [
+      { key: 'show_histories', text: 'Show my histories' },
       { key: 'no_payout', text: "Why didn’t I get payout?" },
       { key: 'claim_status', text: 'Check my claim status' },
       { key: 'disruption_active', text: 'Is disruption active?' },
@@ -32,7 +33,6 @@ const assistantContent = {
       { key: 'payout_calc', text: 'How is payout calculated?' },
       { key: 'explain_claim', text: 'Explain my claim' },
       { key: 'coverage', text: 'Am I covered?' },
-      { key: 'show_histories', text: 'Show my histories' },
       { key: 'raise_ticket', text: 'Raise a support ticket' },
     ],
     placeholder: 'Type your message...',
@@ -42,10 +42,11 @@ const assistantContent = {
   },
   hi: {
     label: 'हिन्दी',
-    title: 'सहायता सहायक',
+    title: 'Support',
     close: 'बंद करें',
     send: 'भेजें',
     queries: [
+      { key: 'show_histories', text: 'मेरी हिस्ट्री दिखाएं' },
       { key: 'no_payout', text: 'मुझे भुगतान क्यों नहीं मिला?' },
       { key: 'claim_status', text: 'मेरे क्लेम की स्थिति क्या है?' },
       { key: 'disruption_active', text: 'क्या अभी व्यवधान सक्रिय है?' },
@@ -53,7 +54,6 @@ const assistantContent = {
       { key: 'payout_calc', text: 'भुगतान कैसे गणना होता है?' },
       { key: 'explain_claim', text: 'मेरे क्लेम की जानकारी बताएं' },
       { key: 'coverage', text: 'क्या मैं अभी कवर में हूँ?' },
-      { key: 'show_histories', text: 'मेरी हिस्ट्री दिखाएं' },
       { key: 'raise_ticket', text: 'सपोर्ट टिकट बनाएं' },
     ],
     placeholder: 'अपना संदेश लिखें...',
@@ -63,10 +63,11 @@ const assistantContent = {
   },
   te: {
     label: 'తెలుగు',
-    title: 'సపోర్ట్ అసిస్టెంట్',
+    title: 'Support',
     close: 'మూసివేయి',
     send: 'పంపు',
     queries: [
+      { key: 'show_histories', text: 'నా హిస్టరీ చూపించు' },
       { key: 'no_payout', text: 'నాకు చెల్లింపు ఎందుకు రాలేదు?' },
       { key: 'claim_status', text: 'నా క్లెయిమ్ స్థితి ఏమిటి?' },
       { key: 'disruption_active', text: 'ప్రస్తుతం అంతరాయం ఉందా?' },
@@ -74,7 +75,6 @@ const assistantContent = {
       { key: 'payout_calc', text: 'చెల్లింపు ఎలా గణించబడుతుంది?' },
       { key: 'explain_claim', text: 'నా క్లెయిమ్ వివరాలు చెప్పండి' },
       { key: 'coverage', text: 'నేను ప్రస్తుతం కవర్లో ఉన్నానా?' },
-      { key: 'show_histories', text: 'నా హిస్టరీ చూపించు' },
       { key: 'raise_ticket', text: 'సపోర్ట్ టికెట్ నమోదు చేయండి' },
     ],
     placeholder: 'మీ సందేశాన్ని టైప్ చేయండి...',
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   langItemActive: { backgroundColor: '#eff6ff' },
   langItemText: { color: '#334155', fontWeight: '600' },
   langItemTextActive: { color: '#1d4ed8', fontWeight: '800' },
-  title: { fontSize: 16, fontWeight: '900', color: '#0f172a' },
+  title: { fontSize: 16, fontWeight: '900', color: '#0f172a', flexShrink: 1 },
   close: { color: '#1a73e8', fontWeight: '700' },
   history: { marginTop: 8, flex: 1, minHeight: 140 },
   historyContent: { paddingBottom: 10, paddingHorizontal: 2 },
