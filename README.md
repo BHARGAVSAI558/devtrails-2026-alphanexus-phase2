@@ -233,6 +233,7 @@ Floating assistant accessible from every screen:
 
 - **Predefined queries**: Why didn't I get paid? What is my claim status? Is there a disruption now?
 - **Raise Ticket**: unique ticket ID (TKT-000001), tracked in admin queue
+- **How to use**: open Support chat → tap **Raise Ticket** → add issue and optional transaction ID
 - **Language switch**: English / हिंदी / తెలుగు — no external translation API, all built-in
 - **Admin reply loop**: admin responds from dashboard → reply pushed back to user's chat → notification triggered
 
