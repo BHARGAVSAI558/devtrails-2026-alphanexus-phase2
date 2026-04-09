@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const navigate = useNavigate();
   const workerAppUrl = 'https://safenet-sage.vercel.app';
-  const expoDeepLink = 'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/598be6e8-b9b4-4239-8124-7b5ff779a7be';
+  const expoDeepLink = 'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/278ac272-c5ef-40dc-beb2-25d1c58cae8e';
   const goToAdminLogin = () => {
     navigate('/admin-login', {
       state: { username: 'admin', password: 'admin123' },

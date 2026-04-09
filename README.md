@@ -11,13 +11,20 @@
 | | URL |
 |--|--|
 | 📱 **Worker App (Web)** | **[https://safenet-sage.vercel.app](https://safenet-sage.vercel.app)** |
+| 🔗 **Single Entry (User + Admin options)** | **[https://safenet-admin-wine.vercel.app/login](https://safenet-admin-wine.vercel.app/login)** |
 | 🖥️ **Admin Dashboard** | **[https://safenet-admin-wine.vercel.app/admin-login](https://safenet-admin-wine.vercel.app/admin-login)** |
 | ⚙️ **Backend API** | [https://safenet-api-y4se.onrender.com](https://safenet-api-y4se.onrender.com) |
 | ❤️ **Health Check** | [https://safenet-api-y4se.onrender.com/health](https://safenet-api-y4se.onrender.com/health) |
 | 🎬 **Demo Video** | [Watch on YouTube](https://youtube.com/shorts/KdsrN05xIyM) |
 | 💻 **GitHub** | [devtrails-2026-alphanexus-phase2](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2) |
 
+**📱 Scan this QR in Expo Go (recommended):**
+
+![SafeNet QR Code](safenet_v2/admin/public/worker-app-qr.png)
+
 ---
+
+![SafeNet QR Code](safenet_v2/admin/public/worker-app-qr.png)
 
 ## ⚡ Start Here — 2-Minute Demo Flow
 
@@ -49,7 +56,7 @@ Install **Expo Go** from App Store or Play Store, then scan:
 
 Or open this link directly in Expo Go:
 ```
-exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/598be6e8-b9b4-4239-8124-7b5ff779a7be
+exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/278ac272-c5ef-40dc-beb2-25d1c58cae8e
 ```
 
 ### Run locally
