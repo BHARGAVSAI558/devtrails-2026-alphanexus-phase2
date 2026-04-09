@@ -15,7 +15,6 @@
 | 🖥️ **Admin Dashboard** | **[https://safenet-admin-wine.vercel.app/admin-login](https://safenet-admin-wine.vercel.app/admin-login)** |
 | ⚙️ **Backend API** | [https://safenet-api-y4se.onrender.com](https://safenet-api-y4se.onrender.com) |
 | ❤️ **Health Check** | [https://safenet-api-y4se.onrender.com/health](https://safenet-api-y4se.onrender.com/health) |
-| 🎬 **Demo Video** | [Watch on YouTube](https://youtube.com/shorts/KdsrN05xIyM) |
 | 💻 **GitHub** | [devtrails-2026-alphanexus-phase2](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2) |
 
 **📱 Scan this QR in Expo Go (recommended):**
@@ -23,8 +22,6 @@
 ![SafeNet QR Code](safenet_v2/admin/public/worker-app-qr.png)
 
 ---
-
-![SafeNet QR Code](safenet_v2/admin/public/worker-app-qr.png)
 
 ## ⚡ Start Here — 2-Minute Demo Flow
 
