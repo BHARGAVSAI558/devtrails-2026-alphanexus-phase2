@@ -68,14 +68,26 @@ def _history_row(s: Simulation) -> dict[str, Any]:
     effective_status = "CREDITED" if credited else ui_status
     created = s.created_at
     created_iso = _created_at_utc_z(created)
+    transaction_id = f"TXN-{int(s.id):08d}" if payout_amt > 0 else f"CLM-{int(s.id):08d}"
     return {
         "id": s.id,
+        "transaction_id": transaction_id,
         "disruption_type": label,
         "status": effective_status,
         "payout_amount": round(payout_amt, 2),
         "created_at": created_iso,
         "fraud_score": float(s.fraud_score or 0.0),
         "reason": _history_reason(s, "APPROVED" if credited else ui_status, payout_amt if credited else 0.0),
+        "details": {
+            "claim_id": s.id,
+            "transaction_id": transaction_id,
+            "decision": str(s.decision.value if hasattr(s.decision, "value") else s.decision),
+            "expected_income": round(float(s.expected_income or 0.0), 2),
+            "actual_income": round(float(s.actual_income or 0.0), 2),
+            "loss": round(float(s.loss or 0.0), 2),
+            "payout": round(payout_amt, 2),
+            "reason": str(s.reason or ""),
+        },
     }
 
 
@@ -102,6 +114,7 @@ def _format_payout_date_display(created_at: datetime | None) -> str:
 def _payout_row_from_simulation(s: Simulation) -> dict[str, Any]:
     label, icon = disruption_from_simulation(s)
     amt = float(s.payout or 0.0)
+    transaction_id = f"TXN-{int(s.id):08d}"
     return {
         "date": _format_payout_date_display(s.created_at),
         "disruption_type": label,
@@ -109,7 +122,20 @@ def _payout_row_from_simulation(s: Simulation) -> dict[str, Any]:
         "status": "credited",
         "icon": icon,
         "claim_id": s.id,
+        "transaction_id": transaction_id,
+        "timestamp": _created_at_utc_z(s.created_at),
+        "reason": str(s.reason or "Disruption verified and payout credited."),
         "source": "simulation",
+        "details": {
+            "claim_id": s.id,
+            "transaction_id": transaction_id,
+            "decision": str(s.decision.value if hasattr(s.decision, "value") else s.decision),
+            "expected_income": round(float(s.expected_income or 0.0), 2),
+            "actual_income": round(float(s.actual_income or 0.0), 2),
+            "loss": round(float(s.loss or 0.0), 2),
+            "payout": round(amt, 2),
+            "reason": str(s.reason or ""),
+        },
     }
 
 
@@ -216,12 +242,23 @@ async def claim_history(
         out = [
             {
                 "id": int(n.id) * -1,
+                "transaction_id": f"NTX-{int(n.id):08d}",
                 "disruption_type": "Disruption",
                 "status": "CREDITED",
                 "payout_amount": round(_amount_from_title(n.title), 2),
                 "created_at": _created_at_utc_z(n.created_at),
                 "fraud_score": 0.0,
                 "reason": str(n.message or "Payout credited."),
+                "details": {
+                    "claim_id": int(n.id) * -1,
+                    "transaction_id": f"NTX-{int(n.id):08d}",
+                    "decision": "APPROVED",
+                    "expected_income": 0.0,
+                    "actual_income": 0.0,
+                    "loss": 0.0,
+                    "payout": round(_amount_from_title(n.title), 2),
+                    "reason": str(n.message or "Payout credited."),
+                },
             }
             for n in notif_rows
         ]
@@ -278,7 +315,20 @@ async def payout_history(
                 "status": "credited",
                 "icon": "cloudy",
                 "claim_id": int(n.id) * -1,
+                "transaction_id": f"NTX-{int(n.id):08d}",
+                "timestamp": _created_at_utc_z(n.created_at),
+                "reason": str(n.message or "Payout credited."),
                 "source": "notification_fallback",
+                "details": {
+                    "claim_id": int(n.id) * -1,
+                    "transaction_id": f"NTX-{int(n.id):08d}",
+                    "decision": "APPROVED",
+                    "expected_income": 0.0,
+                    "actual_income": 0.0,
+                    "loss": 0.0,
+                    "payout": round(_amount_from_title(n.title), 2),
+                    "reason": str(n.message or "Payout credited."),
+                },
             }
             for n in notif_rows
         ]

@@ -429,6 +429,7 @@ export default function DashboardScreen({ navigation }) {
   const profileLoading = Boolean(profileQueryLoading && !workerProfile);
   const payoutsQuery = usePayoutHistory();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const notificationsQuery = useQuery({
     queryKey: ['notifications', userId],
@@ -1447,9 +1448,11 @@ export default function DashboardScreen({ navigation }) {
               String(p.status || '').toLowerCase() === 'credited' ||
               String(p.decision || '').toUpperCase().includes('APPROV');
             return (
-              <View
+              <TouchableOpacity
                 key={String(p.id || p.claim_id || when + disruption)}
                 style={[styles.payoutRow, { borderColor: colors.border }]}
+                activeOpacity={0.86}
+                onPress={() => setSelectedPayment(p)}
               >
                 <Text style={[styles.payoutDate, { color: colors.muted }]} numberOfLines={2}>
                   {when}
@@ -1462,7 +1465,7 @@ export default function DashboardScreen({ navigation }) {
                 <View style={styles.payoutCreditedBadge}>
                   <Text style={styles.payoutCreditedText}>{isCredited ? 'CREDITED' : 'PAID'}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -1581,6 +1584,28 @@ export default function DashboardScreen({ navigation }) {
             </View>
             <TouchableOpacity style={styles.celebrationBtn} onPress={() => setPayoutCelebration(null)}>
               <Text style={styles.celebrationBtnText}>Done</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </AppModal>
+
+      <AppModal
+        visible={Boolean(selectedPayment)}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedPayment(null)}
+      >
+        <Pressable style={styles.celebrationBackdrop} onPress={() => setSelectedPayment(null)}>
+          <Pressable style={styles.paymentDetailSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.paymentDetailTitle}>Payment details</Text>
+            <Text style={styles.paymentDetailLine}>Transaction ID: {selectedPayment?.transaction_id || '—'}</Text>
+            <Text style={styles.paymentDetailLine}>Claim ID: {selectedPayment?.claim_id ?? '—'}</Text>
+            <Text style={styles.paymentDetailLine}>Amount: ₹{Math.round(Number(selectedPayment?.amount || selectedPayment?.payout || selectedPayment?.payout_amount || 0))}</Text>
+            <Text style={styles.paymentDetailLine}>Status: {String(selectedPayment?.status || 'credited').toUpperCase()}</Text>
+            <Text style={styles.paymentDetailLine}>Timestamp: {formatPayoutWhen(selectedPayment)}</Text>
+            <Text style={styles.paymentDetailReason}>{String(selectedPayment?.reason || selectedPayment?.details?.reason || 'Disruption verified and payout credited.')}</Text>
+            <TouchableOpacity style={styles.paymentDetailBtn} onPress={() => setSelectedPayment(null)}>
+              <Text style={styles.paymentDetailBtnText}>Close</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -1993,5 +2018,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   celebrationBtnText: { color: '#1b5e20', fontWeight: '900', fontSize: 16 },
+  paymentDetailSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    width: '100%',
+    alignSelf: 'flex-end',
+  },
+  paymentDetailTitle: { fontSize: 16, fontWeight: '900', color: '#0f172a', marginBottom: 8 },
+  paymentDetailLine: { fontSize: 13, color: '#1e293b', marginBottom: 6, fontWeight: '700' },
+  paymentDetailReason: { marginTop: 6, fontSize: 12, color: '#475569', lineHeight: 18 },
+  paymentDetailBtn: {
+    marginTop: 12,
+    backgroundColor: '#1a73e8',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  paymentDetailBtnText: { color: '#fff', fontWeight: '900', fontSize: 13 },
 });
 

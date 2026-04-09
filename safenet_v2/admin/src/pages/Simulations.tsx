@@ -87,17 +87,20 @@ export default function Simulations() {
           <thead>
             <tr>
               <th style={adminUi.th}>ID</th>
+              <th style={adminUi.th}>Transaction</th>
               <th style={adminUi.th}>User</th>
               <th style={adminUi.th}>Decision</th>
               <th style={adminUi.th}>Payout</th>
               <th style={adminUi.th}>Fraud</th>
+              <th style={adminUi.th}>Reason</th>
               <th style={adminUi.th}>Created</th>
             </tr>
           </thead>
           <tbody>
-            {sims.map((s: { id: number; user_id: number; decision: string; payout: number; fraud_score: number; created_at: string }) => (
+            {sims.map((s: { id: number; transaction_id?: string; user_id: number; decision: string; payout: number; fraud_score: number; reason?: string; created_at: string }) => (
               <tr key={s.id}>
                 <td style={adminUi.td}>{s.id}</td>
+                <td style={adminUi.td}>{s.transaction_id || `CLM-${String(s.id).padStart(8, '0')}`}</td>
                 <td style={adminUi.td}>{s.user_id}</td>
                 <td style={adminUi.td}>
                   <span
@@ -125,12 +128,13 @@ export default function Simulations() {
                 </td>
                 <td style={adminUi.td}>₹{Number(s.payout).toFixed(0)}</td>
                 <td style={adminUi.td}>{Number(s.fraud_score).toFixed(2)}</td>
+                <td style={adminUi.td}>{String(s.reason || '—')}</td>
                 <td style={{ ...adminUi.td, whiteSpace: 'nowrap' }}>{formatIstDateTime(s.created_at)}</td>
               </tr>
             ))}
             {sims.length === 0 ? (
               <tr>
-                <td colSpan={6} style={adminUi.td}>
+                <td colSpan={8} style={adminUi.td}>
                   <div style={adminUi.empty}>No simulations yet.</div>
                 </td>
               </tr>

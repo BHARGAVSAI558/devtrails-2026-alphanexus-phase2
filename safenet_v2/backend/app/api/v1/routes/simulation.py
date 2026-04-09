@@ -143,7 +143,7 @@ async def _demo_claim_pipeline(
     worker_id: int,
 ) -> None:
     redis = getattr(app.state, "redis", None)
-    step_delay = 0.05 if body.fast_mode else 1.0
+    step_delay = 0.9 if body.fast_mode else 1.0
 
     try:
         async with AsyncSessionLocal() as db:
@@ -326,6 +326,32 @@ async def _demo_claim_pipeline(
                     correlation_id=run_id,
                 )
                 await asyncio.sleep(step_delay)
+            else:
+                # Demo timing: keep payout realistic (not instant) so users can see progress in 3-4s.
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status="VERIFYING",
+                    message="Verifying disruption signals...",
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    correlation_id=run_id,
+                )
+                await asyncio.sleep(step_delay)
+                await publish_claim_update(
+                    redis=redis,
+                    worker_id=worker_id,
+                    claim_id=cid,
+                    status="FRAUD_CHECK",
+                    message="Running safety checks...",
+                    zone_id=zone_id,
+                    disruption_type=body.scenario,
+                    correlation_id=run_id,
+                    fraud_score=0.1,
+                )
+                await asyncio.sleep(step_delay)
+                await asyncio.sleep(1.2)
 
                 await publish_claim_update(
                     redis=redis,

@@ -1,5 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import AppModal from './AppModal';
@@ -19,6 +31,7 @@ const assistantContent = {
       { key: 'payment_delayed', text: 'Payment delayed?' },
       { key: 'explain_claim', text: 'Explain my claim' },
       { key: 'coverage', text: 'Am I covered?' },
+      { key: 'show_histories', text: 'Show my histories' },
       { key: 'raise_ticket', text: 'Raise a support ticket' },
     ],
     placeholder: 'Type your message...',
@@ -38,6 +51,7 @@ const assistantContent = {
       { key: 'payment_delayed', text: 'भुगतान में देरी क्यों है?' },
       { key: 'explain_claim', text: 'मेरे क्लेम की जानकारी बताएं' },
       { key: 'coverage', text: 'क्या मैं अभी कवर में हूँ?' },
+      { key: 'show_histories', text: 'मेरी हिस्ट्री दिखाएं' },
       { key: 'raise_ticket', text: 'सपोर्ट टिकट बनाएं' },
     ],
     placeholder: 'अपना संदेश लिखें...',
@@ -57,6 +71,7 @@ const assistantContent = {
       { key: 'payment_delayed', text: 'చెల్లింపు ఆలస్యం ఎందుకు?' },
       { key: 'explain_claim', text: 'నా క్లెయిమ్ వివరాలు చెప్పండి' },
       { key: 'coverage', text: 'నేను ప్రస్తుతం కవర్లో ఉన్నానా?' },
+      { key: 'show_histories', text: 'నా హిస్టరీ చూపించు' },
       { key: 'raise_ticket', text: 'సపోర్ట్ టికెట్ నమోదు చేయండి' },
     ],
     placeholder: 'మీ సందేశాన్ని టైప్ చేయండి...',
@@ -73,6 +88,7 @@ export default function AssistantModal({ visible, onClose }) {
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [languageOpen, setLanguageOpen] = useState(false);
   const [ticketText, setTicketText] = useState('');
+  const [ticketOpen, setTicketOpen] = useState(false);
 
   const historyQuery = useQuery({
     queryKey: ['supportHistory', userId],
@@ -131,10 +147,23 @@ export default function AssistantModal({ visible, onClose }) {
 
   return (
     <AppModal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.wrap}>
-        <View style={styles.card}>
+      <Pressable style={styles.wrap} onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          style={styles.keyboardWrap}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+        >
+          <Pressable style={styles.card} onPress={() => {}}>
           <View style={styles.head}>
-            <Text style={styles.title}>{languagePack.title}</Text>
+            <View style={styles.headLeft}>
+              <TouchableOpacity
+                style={[styles.raiseTicketTopBtn, ticketOpen && styles.raiseTicketTopBtnActive]}
+                onPress={() => setTicketOpen((v) => !v)}
+              >
+                <Text style={styles.raiseTicketTopBtnText}>Raise Ticket</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>{languagePack.title}</Text>
+            </View>
             <View style={styles.headActions}>
               <TouchableOpacity style={styles.langBtn} onPress={() => setLanguageOpen((v) => !v)}>
                 <Text style={styles.langBtnText}>🌐 {languagePack.label}</Text>
@@ -167,7 +196,12 @@ export default function AssistantModal({ visible, onClose }) {
             </View>
           ) : null}
 
-          <ScrollView style={styles.history} contentContainerStyle={styles.historyContent}>
+          <ScrollView
+            style={styles.history}
+            contentContainerStyle={styles.historyContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          >
             {historyQuery.isLoading ? (
               <ActivityIndicator color="#1a73e8" />
             ) : items.length === 0 ? (
@@ -209,31 +243,45 @@ export default function AssistantModal({ visible, onClose }) {
             )}
           </ScrollView>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
-            {languagePack.queries.map((q) => (
-              <TouchableOpacity
-                key={`${selectedLanguage}-${q.key}`}
-                style={styles.quickBtn}
-                onPress={() => send(q.text, q.key === 'raise_ticket' ? 'ticket' : 'predefined', q.key)}
-              >
-                <Text style={styles.quickText}>{q.text}</Text>
+          {ticketOpen ? (
+            <View style={styles.ticketBox}>
+              <Text style={styles.ticketTitle}>Raise Ticket</Text>
+              <TextInput
+                style={styles.ticketInput}
+                placeholder="Describe issue for admin team... add Transaction ID if available"
+                value={ticketText}
+                onChangeText={setTicketText}
+                multiline
+                returnKeyType="done"
+              />
+              <TouchableOpacity style={styles.ticketBtn} onPress={raiseTicket} disabled={sendMutation.isPending || !String(ticketText).trim()}>
+                <Text style={styles.ticketBtnText}>{sendMutation.isPending ? '...' : 'Raise Ticket'}</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <View style={styles.ticketBox}>
-            <Text style={styles.ticketTitle}>Raise Ticket</Text>
-            <TextInput
-              style={styles.ticketInput}
-              placeholder="Describe issue for admin team..."
-              value={ticketText}
-              onChangeText={setTicketText}
-              multiline
-            />
-            <TouchableOpacity style={styles.ticketBtn} onPress={raiseTicket} disabled={sendMutation.isPending || !String(ticketText).trim()}>
-              <Text style={styles.ticketBtnText}>{sendMutation.isPending ? '...' : 'Raise Ticket'}</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickRow}
+              keyboardShouldPersistTaps="handled"
+            >
+              {languagePack.queries.map((q) => (
+                <TouchableOpacity
+                  key={`${selectedLanguage}-${q.key}`}
+                  style={styles.quickBtn}
+                  onPress={() => {
+                    if (q.key === 'raise_ticket') {
+                      setTicketOpen(true);
+                      return;
+                    }
+                    send(q.text, 'predefined', q.key);
+                  }}
+                >
+                  <Text style={styles.quickText}>{q.text}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
           <View style={styles.inputRow}>
             <TextInput
@@ -241,22 +289,35 @@ export default function AssistantModal({ visible, onClose }) {
               placeholder={languagePack.placeholder}
               value={message}
               onChangeText={setMessage}
+              returnKeyType="send"
+              onSubmitEditing={() => send(message)}
             />
             <TouchableOpacity style={styles.send} onPress={() => send(message)}>
               <Text style={styles.sendText}>{sendMutation.isPending ? '...' : languagePack.send}</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Pressable>
     </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
-  card: { backgroundColor: '#fff', borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '86%', padding: 14 },
+  keyboardWrap: { width: '100%' },
+  card: { backgroundColor: '#fff', borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '90%', padding: 14 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   headActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  raiseTicketTopBtn: {
+    backgroundColor: '#f59e0b',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  raiseTicketTopBtnActive: { backgroundColor: '#b45309' },
+  raiseTicketTopBtnText: { color: '#fff', fontWeight: '900', fontSize: 11, textTransform: 'uppercase' },
   langBtn: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 },
   langBtnText: { fontSize: 12, color: '#334155', fontWeight: '700' },
   langMenu: {

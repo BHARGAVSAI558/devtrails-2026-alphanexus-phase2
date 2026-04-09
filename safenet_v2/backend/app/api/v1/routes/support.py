@@ -214,6 +214,9 @@ def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
                 "Coverage check: {coverage_active} ✅\n\nWe keep monitoring your zone continuously and credit payout after verification.",
                 "Your coverage is {coverage_active}.\n\nIf you share your claim status, we can explain the exact decision path.",
             ],
+            "show_histories": [
+                "Fetching your latest transaction history…",
+            ],
         },
         "hi": {
             "no_payout": [
@@ -241,6 +244,9 @@ def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
                 "Coverage check: {coverage_active} ✅\n\nहम आपकी zone को लगातार मॉनिटर करते हैं और verification के बाद payout credit करते हैं।",
                 "आपका coverage {coverage_active} है।\n\nअगर आप चाहें तो claim status बताइए, हम exact decision path समझा देंगे।",
             ],
+            "show_histories": [
+                "आपकी latest transaction history ला रहा हूँ…",
+            ],
         },
         "te": {
             "no_payout": [
@@ -267,6 +273,9 @@ def _predefined_reply(lang: str, key: str, vals: dict[str, str]) -> str | None:
             "coverage": [
                 "Coverage check: {coverage_active} ✅\n\nమీ జోన్‌ను నిరంతరం మానిటర్ చేసి, verification తర్వాత payout credit చేస్తాం।",
                 "మీ coverage {coverage_active} ఉంది।\n\nమీ claim status చెప్పండి — exact decision path వివరించగలం।",
+            ],
+            "show_histories": [
+                "మీ latest transaction history తీసుకొస్తున్నాను…",
             ],
         },
     }
@@ -344,6 +353,40 @@ def _status_reply_localized(lang: str, dis: str, status: str) -> str:
         f"Your latest {dis} claim is currently {st}. Verification is in progress.",
         f"Latest {dis} claim status: {st}. Safety checks are running.",
     )
+
+
+def _tx_id(sim_id: int, payout: float) -> str:
+    return f"TXN-{int(sim_id):08d}" if float(payout or 0.0) > 0.0 else f"CLM-{int(sim_id):08d}"
+
+
+def _format_last_five_histories(lang: str, sims: list[Simulation]) -> str:
+    l = _norm_lang(lang)
+    if not sims:
+        if l == "hi":
+            return "अभी कोई ट्रांजैक्शन हिस्ट्री नहीं मिली। एक disruption रन के बाद मैं आपकी latest 5 entries दिखाऊँगा।"
+        if l == "te":
+            return "ఇప్పటికీ ట్రాన్సాక్షన్ హిస్టరీ లేదు. ఒక disruption run తర్వాత మీ latest 5 entries చూపిస్తాను."
+        return "No transaction history found yet. Run one disruption and I will show your latest 5 entries."
+    lines: list[str] = []
+    for s in sims[:5]:
+        dec = str(s.decision.value if hasattr(s.decision, "value") else s.decision).upper()
+        paid = float(s.payout or 0.0)
+        status = "SUCCESS" if paid > 0 or dec == "APPROVED" else "DENIED"
+        dis = "Disruption"
+        try:
+            import json
+            wd = json.loads(s.weather_data) if isinstance(s.weather_data, str) and s.weather_data else {}
+            raw = str((wd or {}).get("scenario") or "").upper()
+            if raw:
+                dis = raw.replace("_", " ").title()
+        except Exception:
+            pass
+        lines.append(f"• {_tx_id(s.id, paid)} | {status} | {dis} | ₹{int(round(paid))} | {_as_utc_iso(s.created_at)}")
+    if l == "hi":
+        return "आपकी latest 5 transactions (Success/Denied):\n\n" + "\n".join(lines) + "\n\nIssue raise करते समय Transaction ID लिखें।"
+    if l == "te":
+        return "మీ latest 5 ట్రాన్సాక్షన్లు (Success/Denied):\n\n" + "\n".join(lines) + "\n\nIssue raise చేసే సమయంలో Transaction ID ఇవ్వండి."
+    return "Your last 5 transactions (Success/Denied):\n\n" + "\n".join(lines) + "\n\nInclude Transaction ID when raising a ticket."
 
 
 async def _auto_system_reply(db: AsyncSession, user_id: int, msg: str, lang: str = "en") -> str:
@@ -463,6 +506,16 @@ async def create_support_query(
         str(body.query_key or ""),
         _support_values(life, sim, pol),
     )
+    if str(body.query_key or "").lower() == "show_histories":
+        latest = (
+            await db.execute(
+                select(Simulation)
+                .where(Simulation.user_id == uid)
+                .order_by(Simulation.created_at.desc(), Simulation.id.desc())
+                .limit(5)
+            )
+        ).scalars().all()
+        sys_reply = _format_last_five_histories(body.language, latest)
     if not sys_reply:
         sys_reply = await _auto_system_reply(db, uid, body.message, body.language)
     is_ticket = str(body.type or "").lower() == "ticket" or str(body.query_key or "").lower() == "raise_ticket"

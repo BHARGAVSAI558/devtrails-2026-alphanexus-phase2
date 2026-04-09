@@ -11,6 +11,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -59,7 +60,13 @@ export default function OnboardingScreen({ navigation }) {
   };
 
   const inner = (
-    <View style={styles.root}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={[styles.top, { paddingTop: insets.top + 24 }]}>
         <Text style={styles.logo}>🛡️</Text>
         <Text style={styles.title}>SafeNet</Text>
@@ -105,13 +112,13 @@ export default function OnboardingScreen({ navigation }) {
           <Text style={styles.trustItem}>🛡️ Built for gig workers</Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
       {Platform.OS === 'web' ? (
@@ -127,6 +134,7 @@ export default function OnboardingScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: BRAND },
+  scrollContent: { flexGrow: 1 },
   top: {
     flex: 1,
     backgroundColor: BRAND,

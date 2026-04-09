@@ -309,6 +309,7 @@ async def get_all_simulations(
             {
                 "id": s.id,
                 "claim_id": s.id,
+                "transaction_id": (f"TXN-{int(s.id):08d}" if float(s.payout or 0.0) > 0 else f"CLM-{int(s.id):08d}"),
                 "user_id": s.user_id,
                 "decision": s.decision.value if hasattr(s.decision, "value") else str(s.decision),
                 "status": s.decision.value if hasattr(s.decision, "value") else str(s.decision),
@@ -669,6 +670,7 @@ async def get_worker_detail(worker_id: int, admin: User = Depends(get_admin_user
             {
                 "id": s.id,
                 "claim_id": s.id,
+                "transaction_id": (f"TXN-{int(s.id):08d}" if float(s.payout or 0.0) > 0 else f"CLM-{int(s.id):08d}"),
                 "decision": s.decision.value if hasattr(s.decision, "value") else str(s.decision),
                 "payout": s.payout,
                 "fraud_score": s.fraud_score,

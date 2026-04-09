@@ -6,6 +6,7 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { claims } from '../services/api';
 import { useClaims } from '../contexts/ClaimContext';
 import { formatIstDateTime } from '../utils/istFormat';
+import AppModal from '../components/AppModal';
 
 const BRAND = '#1a73e8';
 const STEPS = ['Detected', 'Verifying', 'Fraud Check', 'Approved'];
@@ -72,6 +74,7 @@ export default function ClaimsScreen() {
   const { lastClaimUpdate, activeClaims } = useClaims();
   const [elapsed, setElapsed] = useState(0);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [selectedTx, setSelectedTx] = useState(null);
 
   const historyQuery = useQuery({
     queryKey: ['claimsHistory'],
@@ -228,7 +231,7 @@ export default function ClaimsScreen() {
           const showAmt = isApp ? amt : 0;
           const chipLabel = isCredited && st !== 'BLOCKED' ? 'CREDITED' : st || 'PENDING';
           return (
-            <View key={String(row.id)} style={styles.card}>
+            <TouchableOpacity key={String(row.id)} style={styles.card} activeOpacity={0.88} onPress={() => setSelectedTx(row)}>
               <View style={styles.histTop}>
                 <Text style={styles.histIcon}>{disruptionIcon(row.disruption_type)}</Text>
                 <View style={styles.histMain}>
@@ -258,10 +261,26 @@ export default function ClaimsScreen() {
               {row.reason && !isBlock ? (
                 <Text style={styles.reasonLine}>{row.reason}</Text>
               ) : null}
-            </View>
+            </TouchableOpacity>
           );
         })
       )}
+      <AppModal visible={Boolean(selectedTx)} transparent animationType="slide" onRequestClose={() => setSelectedTx(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Payment details</Text>
+            <Text style={styles.modalLine}>Transaction ID: {selectedTx?.transaction_id || '—'}</Text>
+            <Text style={styles.modalLine}>Claim ID: {selectedTx?.id ?? '—'}</Text>
+            <Text style={styles.modalLine}>Status: {String(selectedTx?.status || '—')}</Text>
+            <Text style={styles.modalLine}>Amount: ₹{Math.round(Number(selectedTx?.payout_amount || 0))}</Text>
+            <Text style={styles.modalLine}>Timestamp: {selectedTx?.created_at ? formatIstDateTime(selectedTx?.created_at) : '—'}</Text>
+            <Text style={styles.modalReason}>{selectedTx?.reason || '—'}</Text>
+            <TouchableOpacity style={styles.modalBtn} onPress={() => setSelectedTx(null)}>
+              <Text style={styles.modalBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </AppModal>
     </ScrollView>
   );
 }
@@ -335,4 +354,11 @@ const styles = StyleSheet.create({
   histHint: { fontSize: 12, color: '#64748b', marginTop: 6, lineHeight: 18 },
   fraudNote: { fontSize: 12, color: '#b91c1c', fontWeight: '700', marginTop: 10 },
   reasonLine: { fontSize: 12, color: '#475569', marginTop: 8, lineHeight: 18 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 },
+  modalTitle: { fontSize: 16, fontWeight: '900', color: '#0f172a', marginBottom: 8 },
+  modalLine: { fontSize: 13, color: '#1e293b', marginBottom: 6, fontWeight: '700' },
+  modalReason: { fontSize: 12, color: '#475569', marginTop: 6, lineHeight: 18 },
+  modalBtn: { marginTop: 12, backgroundColor: '#1a73e8', paddingVertical: 11, borderRadius: 10, alignItems: 'center' },
+  modalBtnText: { color: '#fff', fontSize: 13, fontWeight: '900' },
 });
