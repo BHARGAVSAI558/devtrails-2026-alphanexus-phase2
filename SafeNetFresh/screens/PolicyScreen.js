@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 
 import AppModal from '../components/AppModal';
 import { policies, zones as zonesApi } from '../services/api';
@@ -106,6 +106,7 @@ export default function PolicyScreen() {
   });
   const [justActivated, setJustActivated] = useState(false);
   const [activateError, setActivateError] = useState('');
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const checkScale = useRef(new Animated.Value(0)).current;
 
   const zoneId = useMemo(() => {
@@ -256,6 +257,7 @@ export default function PolicyScreen() {
   const openPaymentSheet = useCallback((tierId) => {
     setSelectedTier(tierId);
     setPayMethod('upi');
+    setSheetOpen(false);
     setGatewayOpen(true);
   }, []);
 
@@ -301,34 +303,38 @@ export default function PolicyScreen() {
     setSheetOpen(true);
   }, []);
 
-  useEffect(() => {
-    const openTier = route?.params?.openPaymentForTier;
-    const openPlanSheet = route?.params?.openPlanSheet;
-    if (openTier) {
-      const tier = canonicalTierLabel(String(openTier));
-      if (['Basic', 'Standard', 'Pro'].includes(tier)) {
-        setSelectedTier(tier);
-        setGatewayOpen(true);
-        setSheetOpen(false);
+  useFocusEffect(
+    useCallback(() => {
+      const openTier = route?.params?.openPaymentForTier;
+      const openPlanSheet = route?.params?.openPlanSheet;
+      if (openTier) {
+        const tier = canonicalTierLabel(String(openTier));
+        if (['Basic', 'Standard', 'Pro'].includes(tier)) {
+          setSelectedTier(tier);
+          setGatewayOpen(true);
+          setSheetOpen(false);
+        }
+        navigation.setParams?.({ openPaymentForTier: undefined, openPlanSheet: undefined });
+        return;
       }
-      navigation.setParams?.({ openPaymentForTier: undefined, openPlanSheet: undefined });
-      return;
-    }
-    if (openPlanSheet) {
-      setGatewayOpen(false);
-      setSheetOpen(true);
-      navigation.setParams?.({ openPlanSheet: undefined });
-    }
-  }, [route?.params?.openPaymentForTier, route?.params?.openPlanSheet, navigation]);
+      if (openPlanSheet) {
+        setGatewayOpen(false);
+        setSheetOpen(true);
+        navigation.setParams?.({ openPlanSheet: undefined, openPaymentForTier: undefined });
+      }
+    }, [route?.params?.openPaymentForTier, route?.params?.openPlanSheet, navigation, route?.params])
+  );
 
   const onRefresh = useCallback(() => {
-    void policyQuery.refetch();
-    void forecastQuery.refetch();
-    void forecastDailyQuery.refetch();
+    setManualRefreshing(true);
+    Promise.allSettled([
+      policyQuery.refetch(),
+      forecastQuery.refetch(),
+      forecastDailyQuery.refetch(),
+    ]).finally(() => setManualRefreshing(false));
   }, [policyQuery.refetch, forecastQuery.refetch, forecastDailyQuery.refetch]);
 
-  const refreshing =
-    policyQuery.isRefetching || forecastQuery.isRefetching || forecastDailyQuery.isRefetching;
+  const refreshing = manualRefreshing;
 
   const colors = scheme === 'dark'
     ? { bg: '#0f172a', card: '#1e293b', text: '#f8fafc', sub: '#94a3b8' }
@@ -574,19 +580,15 @@ export default function PolicyScreen() {
             <View style={styles.brandRow}>
               <View style={[styles.brandPill, { backgroundColor: '#ede9fe' }]}>
                 <Image source={PAYMENT_ASSETS.phonepe} style={styles.brandIcon} />
-                <Text style={[styles.brandText, { color: '#6d28d9' }]}>PhonePe</Text>
               </View>
               <View style={[styles.brandPill, { backgroundColor: '#dcfce7' }]}>
                 <Image source={PAYMENT_ASSETS.gpay} style={styles.brandIcon} />
-                <Text style={[styles.brandText, { color: '#166534' }]}>GPay</Text>
               </View>
               <View style={[styles.brandPill, { backgroundColor: '#dbeafe' }]}>
                 <Image source={PAYMENT_ASSETS.gpay} style={styles.brandIcon} />
-                <Text style={[styles.brandText, { color: '#1d4ed8' }]}>UPI</Text>
               </View>
               <View style={[styles.brandPill, { backgroundColor: '#fee2e2' }]}>
                 <Image source={PAYMENT_ASSETS.card} style={styles.brandIcon} />
-                <Text style={[styles.brandText, { color: '#b91c1c' }]}>Cards</Text>
               </View>
             </View>
             {payMethod === 'upi' ? (
@@ -936,16 +938,17 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 12 },
   brandPill: {
     flex: 1,
-    minHeight: 40,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    minHeight: 48,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.08)',
   },
-  brandIcon: { width: 18, height: 18, borderRadius: 4, resizeMode: 'contain' },
+  brandIcon: { width: '90%', height: 28, borderRadius: 4, resizeMode: 'contain' },
   brandText: { fontSize: 11, fontWeight: '800' },
   qrSection: { alignItems: 'center', marginTop: 14, marginBottom: 10 },
   qrWrap: {
@@ -965,6 +968,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#0f172a',
+    resizeMode: 'cover',
+    backgroundColor: '#fff',
   },
   qrCell: { width: 12, height: 12, margin: 0.5, backgroundColor: '#fff' },
   qrCellOn: { backgroundColor: '#0f172a' },

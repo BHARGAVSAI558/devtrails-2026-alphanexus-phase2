@@ -46,13 +46,21 @@ def _run_alembic_upgrade_sync() -> None:
 
 
 async def _post_init_zones_and_log() -> None:
+    import os
+
     from seed_db import seed_demo_workers, seed_zones
+
+    db_url = (os.getenv("DATABASE_URL") or "").strip() or (settings.DATABASE_URL or "").strip()
+    demo_workers_ok = settings.DEMO_MODE or not db_url
 
     async with AsyncSessionLocal() as session:
         zcount = int((await session.execute(select(func.count()).select_from(Zone))).scalar_one() or 0)
     if zcount == 0:
         await seed_zones()
-    await seed_demo_workers()
+    if demo_workers_ok:
+        await seed_demo_workers()
+    else:
+        logger.info("seed_demo_workers_skipped: hosted DB without DEMO_MODE")
     async with AsyncSessionLocal() as session:
         zcount = int((await session.execute(select(func.count()).select_from(Zone))).scalar_one() or 0)
     logger.info("DB ready. Zones: %s", zcount)

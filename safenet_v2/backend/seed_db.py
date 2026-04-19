@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 
+from app.core.config import settings
 from app.db.session import AsyncSessionLocal, init_db
 from app.models.worker import OccupationType, Profile, RiskProfile, User
 from app.models.zone import Zone
@@ -164,10 +165,16 @@ async def count_zones() -> int:
 
 
 async def main() -> None:
+    import os
+
     await init_db()
     if await count_zones() == 0:
         await seed_zones()
-    await seed_demo_workers()
+    db_url = (os.getenv("DATABASE_URL") or "").strip() or (settings.DATABASE_URL or "").strip()
+    if settings.DEMO_MODE or not db_url:
+        await seed_demo_workers()
+    else:
+        print("seed_demo_workers skipped (set DEMO_MODE=true to create demo phones on Postgres)")
     n = await count_zones()
     print(f"DB ready. Zones: {n}")
 
