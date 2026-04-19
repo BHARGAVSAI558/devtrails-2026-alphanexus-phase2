@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings
 from app.db.base import Base
+from app.db.session import prepare_asyncpg_engine_kwargs
 from app.models import (  # noqa: F401
     FraudSignal,
     Log,
@@ -28,7 +29,8 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return settings.async_database_url
+    url, _ = prepare_asyncpg_engine_kwargs(settings.async_database_url)
+    return url
 
 
 def run_migrations_offline() -> None:
@@ -50,7 +52,8 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    connectable = create_async_engine(get_url(), poolclass=pool.NullPool)
+    url, connect_args = prepare_asyncpg_engine_kwargs(settings.async_database_url)
+    connectable = create_async_engine(url, poolclass=pool.NullPool, connect_args=connect_args)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
