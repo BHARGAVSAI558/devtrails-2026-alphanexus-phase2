@@ -14,6 +14,6 @@ services:
       - key: ADMIN_JWT_SECRET
         value: admin-safenet-2026
       - key: ALLOWED_ORIGINS
-        value: "*"
+        value: "https://safenet-sage.vercel.app,https://safenet-admin-wine.vercel.app,http://localhost:3000,http://localhost:5173,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8081"
       - key: OPENWEATHER_API_KEY
         value: ""

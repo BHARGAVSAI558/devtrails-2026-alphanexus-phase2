@@ -1,9 +1,46 @@
 import os
 from functools import lru_cache
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from pydantic import AliasChoices, Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Always allow these in browser CORS (deduped with env); avoids prod break if Render omits ALLOWED_ORIGINS.
+_REQUIRED_CORS_ORIGINS: Tuple[str, ...] = (
+    "https://safenet-sage.vercel.app",
+    "https://safenet-admin-wine.vercel.app",
+)
+_DEFAULT_DEV_BROWSER_ORIGINS: Tuple[str, ...] = (
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8081",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8081",
+    "exp://127.0.0.1:8081",
+    "exp://localhost:8081",
+)
+
+
+def _parse_allowed_origins_env(raw: str) -> Tuple[List[str], bool]:
+    """
+    Parse ALLOWED_ORIGINS: comma-separated, trimmed, no trailing slash, empty tokens dropped, deduped.
+    Returns (explicit_origins, wildcard_only). wildcard_only is True only when the whole value is empty or '*'.
+    A stray '*' in a list (e.g. '*,https://x') is ignored so we can merge explicit origins safely.
+    """
+    s = (raw or "").strip()
+    if not s or s == "*":
+        return [], True
+    seen: set[str] = set()
+    out: List[str] = []
+    for chunk in s.split(","):
+        token = chunk.strip().rstrip("/")
+        if not token or token == "*":
+            continue
+        if token not in seen:
+            seen.add(token)
+            out.append(token)
+    return out, False
 
 
 class Settings(BaseSettings):
@@ -18,10 +55,12 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     DEMO_MODE: bool = False
 
-    # Comma-separated origins for browser clients (admin Vite = http://localhost:5173).
-    # On Render, set e.g. ALLOWED_ORIGINS=http://localhost:5173,https://your-admin.example.com
-    # Use * alone to allow any origin (no credentials).
+    # Comma-separated browser Origins (scheme+host+port, no path). Parsed with trim, slash strip, dedupe.
+    # Defaults include live Vercel frontends so a missing Render env var does not block production CORS.
+    # Set ALLOWED_ORIGINS=* on Render only if you intend to reflect all Origins (Starlette echoes Origin when using credentials).
     ALLOWED_ORIGINS: str = (
+        "https://safenet-sage.vercel.app,"
+        "https://safenet-admin-wine.vercel.app,"
         "http://localhost:3000,"
         "http://localhost:5173,"
         "http://localhost:8081,"
@@ -102,12 +141,19 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def origins(self) -> List[str]:
-        raw = (self.ALLOWED_ORIGINS or "*").strip()
-        if raw == "*" or raw == "":
+        explicit, wildcard_only = _parse_allowed_origins_env(self.ALLOWED_ORIGINS or "")
+        # Whole env is '*' or blank: Starlette wildcard + credentials echoes request Origin.
+        if wildcard_only:
             return ["*"]
-        parts = [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
-        # Empty list (e.g. typo in env) would block all browsers — fall back to *.
-        return parts if parts else ["*"]
+        # Merge required production + dev defaults + env list (dedupe, preserve order).
+        merged: List[str] = []
+        seen: set[str] = set()
+        for bucket in (_REQUIRED_CORS_ORIGINS, _DEFAULT_DEV_BROWSER_ORIGINS, tuple(explicit)):
+            for o in bucket:
+                if o not in seen:
+                    seen.add(o)
+                    merged.append(o)
+        return merged if merged else ["*"]
 
     @computed_field
     @property
