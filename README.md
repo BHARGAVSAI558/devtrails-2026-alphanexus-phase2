@@ -12,7 +12,6 @@ When rain, floods, heat, or shutdowns erase a day's earnings — SafeNet detects
 
 [![Phase](https://img.shields.io/badge/Guidewire_DEVTrails_2026-Phase_3_Final-1d4ed8?style=for-the-badge&logoColor=white)](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2)
 [![Team](https://img.shields.io/badge/Team-AlphaNexus-7c3aed?style=for-the-badge)](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2)
-[![Phase 1 Rating](https://img.shields.io/badge/Phase_1_Rating-⭐⭐⭐⭐_4_Stars-f59e0b?style=for-the-badge)](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2)
 [![Stack](https://img.shields.io/badge/Stack-FastAPI_+_Expo_+_PostgreSQL-16a34a?style=for-the-badge)](https://safenet-api-y4se.onrender.com/health)
 
 </div>
