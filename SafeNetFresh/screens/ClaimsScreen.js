@@ -163,6 +163,8 @@ export default function ClaimsScreen({ navigation }) {
     () => isInFlight(lastClaimUpdate, activeClaims),
     [lastClaimUpdate, activeClaims]
   );
+  const hardTimeoutReached = Boolean(inflight && elapsed >= 10);
+  const inflightNow = inflight && !hardTimeoutReached;
 
   const startedAt = useMemo(() => {
     const ts =
@@ -275,7 +277,7 @@ export default function ClaimsScreen({ navigation }) {
 
       <Text style={styles.sectionLabel}>{t('claims.active')}</Text>
       <View style={styles.card}>
-        {!inflight ? (
+        {!inflightNow ? (
           <>
             <Text style={styles.emptyActive}>{t('claims.no_active_claim')}</Text>
             {Array.isArray(activeDisruptionsQuery.data) && activeDisruptionsQuery.data.length === 0 ? (
@@ -323,7 +325,11 @@ export default function ClaimsScreen({ navigation }) {
               })}
             </View>
             <View style={styles.msgBox}>
-              <Text style={styles.msgText}>{msg}</Text>
+              <Text style={styles.msgText}>
+                {String(lastClaimUpdate?.status || '').toUpperCase().includes('PAYOUT')
+                  ? `₹${Math.round(Number(lastClaimUpdate?.payout_amount || 0))} credited to ${workerProfile?.bank_account_name || 'your account'}`
+                  : msg}
+              </Text>
             </View>
           </>
         )}

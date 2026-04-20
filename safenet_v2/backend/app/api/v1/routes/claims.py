@@ -315,6 +315,8 @@ async def download_claim_receipt(
         raise HTTPException(status_code=404, detail=str(exc))
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not your claim")
+    except Exception:
+        raise HTTPException(status_code=503, detail="Receipt service is temporarily unavailable")
     return Response(
         content=pdf,
         media_type="application/pdf",

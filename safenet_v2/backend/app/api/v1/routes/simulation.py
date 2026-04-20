@@ -124,7 +124,7 @@ async def _sim_pipeline(
     worker_id: int,
 ) -> None:
     redis = getattr(app.state, "redis", None)
-    step_delay = 0.9 if body.fast_mode else 1.2
+    step_delay = 0.65 if body.fast_mode else 0.9
 
     try:
         async with AsyncSessionLocal() as db:
@@ -372,6 +372,12 @@ async def _sim_pipeline(
                 prof_row.total_claims = int(prof_row.total_claims or 0) + 1
                 if not no_payout:
                     prof_row.total_payouts = float(prof_row.total_payouts or 0.0) + payout_amount
+                # New users start high; behavior/fraud signals reduce trust gradually.
+                trust_now = float(prof_row.trust_score or 100.0)
+                trust_penalty = min(18.0, max(0.0, float(fraud_score or 0.0) * 12.0))
+                if no_payout and fraud_flag_sim:
+                    trust_penalty = max(trust_penalty, 6.0)
+                prof_row.trust_score = max(0.0, trust_now - trust_penalty)
 
             # ── WebSocket progress steps ──────────────────────────────────────
             await publish_claim_update(
@@ -471,7 +477,12 @@ async def _sim_pipeline(
                 final_status = "NO_PAYOUT" if already_paid else ("CLAIM_REJECTED" if fraud_flag_sim else "NO_PAYOUT")
             else:
                 final_status = "APPROVED"
-            final_message = reason if no_payout else (_approved_message(body.scenario, payout_amount) + fs_suffix)
+            payout_to = (getattr(prof_row, "bank_account_name", None) if prof_row is not None else None) or "your account"
+            final_message = (
+                reason
+                if no_payout
+                else f"₹{int(round(payout_amount))} credited to {payout_to}.{fs_suffix}"
+            )
 
             if not no_payout:
                 await create_notification(
@@ -495,6 +506,7 @@ async def _sim_pipeline(
             try:
                 if not no_payout and final_status == "APPROVED":
                     delay = payout_delay_seconds(trust_points_from_profile(prof_row))
+                    delay = max(0, min(int(delay), 2))
                     if delay > 0:
                         await publish_claim_update(
                             redis=redis,

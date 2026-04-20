@@ -85,9 +85,8 @@ async def upsert_gig_profile(
     weekly = compute_weekly_premium(zone_key, body.working_hours_preset, tier)
 
     row = (await db.execute(select(Profile).where(Profile.user_id == current_user.id))).scalar_one_or_none()
-    prior_claims = int(row.total_claims or 0) if row else 0
     risk_score_computed = float(compute_risk_score(zone_key, body.working_hours_preset, body.platform))
-    risk_score = risk_score_computed if prior_claims > 0 else 0.0
+    risk_score = risk_score_computed
     loc_disp = (body.location_display or "").strip()[:255] if body.location_display else None
 
     if row is None:

@@ -513,7 +513,7 @@ export default function ProfileSetupScreen({ navigation }) {
               <TouchableOpacity style={styles.backBtn} onPress={() => setStep(3)}>
                 <Text style={styles.backBtnText}>Back</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.next, { flex: 1 }]} onPress={submitOnboarding} disabled={loading}>
+              <TouchableOpacity style={[styles.next, { flex: 1 }]} onPress={() => setStep(5)} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.nextText}>Continue</Text>}
               </TouchableOpacity>
             </View>
@@ -585,24 +585,24 @@ export default function ProfileSetupScreen({ navigation }) {
             <Animated.View style={[styles.shieldWrap, { transform: [{ scale: shieldScale }] }]}>
               <Text style={styles.shieldEmoji}>🛡️</Text>
             </Animated.View>
-            <Text style={styles.successTitle}>You're almost protected</Text>
+            <Text style={styles.successTitle}>Profile ready</Text>
             <Text style={styles.successSub}>
-              Open Coverage and complete weekly payment for {successPolicy.tier}. Protection starts immediately after payment confirmation.
+              Add bank details, then choose and activate your coverage plan from Coverage.
             </Text>
 
             <View style={styles.summaryCardPremium}>
-              <Text style={styles.summaryCardTitle}>Your selected plan</Text>
+              <Text style={styles.summaryCardTitle}>Your account details</Text>
+              <Text style={styles.summaryLine}>
+                <Text style={styles.summaryBold}>Name: </Text>
+                {name.trim() || '—'}
+              </Text>
+              <Text style={styles.summaryLine}>
+                <Text style={styles.summaryBold}>Contact: </Text>
+                {successPolicy?.phone_mask || 'Registered number'}
+              </Text>
               <Text style={styles.summaryLine}>
                 <Text style={styles.summaryBold}>Zone: </Text>
                 {successPolicy.zone_label} ({successPolicy.zone_risk_level})
-              </Text>
-              <Text style={styles.summaryLine}>
-                <Text style={styles.summaryBold}>Coverage: </Text>₹
-                {Math.round(successPolicy.max_coverage_per_day).toLocaleString('en-IN')}/day
-              </Text>
-              <Text style={styles.summaryLine}>
-                <Text style={styles.summaryBold}>Premium: </Text>₹
-                {Math.round(successPolicy.weekly_premium).toLocaleString('en-IN')}/week
               </Text>
               <Text style={styles.summaryLine}>
                 <Text style={styles.summaryBold}>Trust level: </Text>

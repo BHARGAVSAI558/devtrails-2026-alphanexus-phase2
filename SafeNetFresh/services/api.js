@@ -28,8 +28,13 @@ const getBackendURL = () => {
         Platform.OS !== 'web' &&
         /localhost|127\.0\.0\.1/i.test(normalized)
       ) {
-        const inferred = inferExpoHostURL();
-        if (inferred) return inferred;
+        // Allow local inference only in development (Expo Go / local debug).
+        if (__DEV__) {
+          const inferred = inferExpoHostURL();
+          if (inferred) return inferred;
+        } else {
+          return 'https://safenet-api-y4se.onrender.com';
+        }
       }
       return normalized;
     }
@@ -46,8 +51,12 @@ const getBackendURL = () => {
       Platform.OS !== 'web' &&
       /localhost|127\.0\.0\.1/i.test(normalized)
     ) {
-      const inferred = inferExpoHostURL();
-      if (inferred) return inferred;
+      if (__DEV__) {
+        const inferred = inferExpoHostURL();
+        if (inferred) return inferred;
+      } else {
+        return 'https://safenet-api-y4se.onrender.com';
+      }
     }
     return normalized;
   }

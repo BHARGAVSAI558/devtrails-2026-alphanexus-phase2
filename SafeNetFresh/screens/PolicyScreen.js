@@ -103,6 +103,9 @@ export default function PolicyScreen() {
     cardExpiry: '',
     cardCvv: '',
     netbanking: 'HDFC',
+    nbAccountName: '',
+    nbAccountNumber: '',
+    nbIfsc: '',
   });
   const [justActivated, setJustActivated] = useState(false);
   const [activateError, setActivateError] = useState('');
@@ -271,6 +274,15 @@ export default function PolicyScreen() {
       const cardNum = String(payForm.cardNumber || '').replace(/\s+/g, '');
       if (cardNum.length < 12 || String(payForm.cardExpiry || '').trim().length < 4 || String(payForm.cardCvv || '').trim().length < 3) {
         setActivateError('Enter valid card number, expiry, and CVV.');
+        return;
+      }
+    }
+    if (payMethod === 'netbanking') {
+      const name = String(payForm.nbAccountName || '').trim();
+      const acc = String(payForm.nbAccountNumber || '').replace(/\s+/g, '');
+      const ifsc = String(payForm.nbIfsc || '').trim().toUpperCase();
+      if (!name || acc.length < 8 || ifsc.length < 4) {
+        setActivateError('Enter account holder, account number, and IFSC for netbanking.');
         return;
       }
     }
@@ -658,18 +670,43 @@ export default function PolicyScreen() {
               </>
             ) : null}
             {payMethod === 'netbanking' ? (
-              <View style={styles.methodRow}>
-                {['HDFC', 'ICICI', 'SBI', 'AXIS'].map((b) => (
-                  <TouchableOpacity
-                    key={b}
-                    style={[styles.methodChip, payForm.netbanking === b && styles.methodChipOn]}
-                    onPress={() => setPayForm((s) => ({ ...s, netbanking: b }))}
-                    disabled={payMutation.isPending}
-                  >
-                    <Text style={[styles.methodChipText, payForm.netbanking === b && styles.methodChipTextOn]}>{b}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <>
+                <View style={styles.methodRow}>
+                  {['HDFC', 'ICICI', 'SBI', 'AXIS'].map((b) => (
+                    <TouchableOpacity
+                      key={b}
+                      style={[styles.methodChip, payForm.netbanking === b && styles.methodChipOn]}
+                      onPress={() => setPayForm((s) => ({ ...s, netbanking: b }))}
+                      disabled={payMutation.isPending}
+                    >
+                      <Text style={[styles.methodChipText, payForm.netbanking === b && styles.methodChipTextOn]}>{b}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TextInput
+                  style={styles.payInput}
+                  editable={!payMutation.isPending}
+                  placeholder="Account holder name"
+                  value={payForm.nbAccountName}
+                  onChangeText={(v) => setPayForm((s) => ({ ...s, nbAccountName: v }))}
+                />
+                <TextInput
+                  style={styles.payInput}
+                  editable={!payMutation.isPending}
+                  placeholder="Account number"
+                  value={payForm.nbAccountNumber}
+                  onChangeText={(v) => setPayForm((s) => ({ ...s, nbAccountNumber: v }))}
+                  keyboardType="number-pad"
+                />
+                <TextInput
+                  style={styles.payInput}
+                  editable={!payMutation.isPending}
+                  placeholder="IFSC"
+                  value={payForm.nbIfsc}
+                  onChangeText={(v) => setPayForm((s) => ({ ...s, nbIfsc: v.toUpperCase() }))}
+                  autoCapitalize="characters"
+                />
+              </>
             ) : null}
             <TouchableOpacity style={[styles.pickBtn, styles.payCtaBtn, payMutation.isPending && { opacity: 0.7 }]} onPress={payNow} disabled={payMutation.isPending}>
               {payMutation.isPending ? (

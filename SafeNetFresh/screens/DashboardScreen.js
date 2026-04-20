@@ -1649,7 +1649,7 @@ export default function DashboardScreen({ navigation }) {
                 ]}
               />
             </View>
-            <Text style={[styles.dnaConfNote, { color: colors.muted }]}>Weekly protection vs your plan cap</Text>
+            <Text style={[styles.dnaConfNote, { color: colors.muted }]}>Weekly payout summary</Text>
           </>
         ) : null}
       </View>
@@ -1681,7 +1681,7 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={styles.coverageRingWrap}>
-            <ProgressRing value={shownWeeklyProtected} max={Math.max(1, shownWeeklyProtected)} size={104} stroke={10} scheme={scheme} />
+            <Text style={{ fontSize: 34 }}>💰</Text>
           </View>
         </View>
         {coverageExpanded ? (
