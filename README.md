@@ -512,7 +512,7 @@ Both apps retry **once** (2 s delay) on transient failures only:
 ## Submission Quick Links
 
 ### Pitch Deck
-[Add public pitch deck link here](https://docs.google.com/presentation/d/1LhPPk7UFxfjY6dbjz6kf0PqrQdqvn945/edit?usp=sharing&ouid=116368085396987359147&rtpof=true&sd=true)
+[Pitch deck link here](https://docs.google.com/presentation/d/1LhPPk7UFxfjY6dbjz6kf0PqrQdqvn945/edit?usp=sharing&ouid=116368085396987359147&rtpof=true&sd=true)
 
 
 
