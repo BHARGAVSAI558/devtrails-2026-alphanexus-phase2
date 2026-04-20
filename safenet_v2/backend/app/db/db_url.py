@@ -6,6 +6,18 @@ from typing import Any, Tuple
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 
+def is_db_ssl_insecure_enabled() -> bool:
+    """
+    DB_SSL_INSECURE=1/true/TRUE/yes enables insecure TLS (no hostname check, no cert verification).
+    Reads from os.getenv() only.
+    """
+    raw = os.getenv("DB_SSL_INSECURE")
+    if raw is None:
+        return False
+    val = str(raw).strip()
+    return val in {"1", "true", "TRUE", "yes"}
+
+
 def _masked_host(host: str | None) -> str:
     if not host:
         return "unknown-host"
@@ -58,7 +70,7 @@ def prepare_asyncpg_engine_kwargs(database_url: str) -> Tuple[str, dict[str, Any
 
     connect_args: dict[str, Any] = {}
 
-    insecure = str(os.getenv("DB_SSL_INSECURE", "")).strip().lower() in {"1", "true", "yes", "on"}
+    insecure = is_db_ssl_insecure_enabled()
     if sslmode_vals:
         mode = (sslmode_vals[0] or "").strip().lower()
         if mode in ("require", "verify-ca", "verify-full", "prefer"):

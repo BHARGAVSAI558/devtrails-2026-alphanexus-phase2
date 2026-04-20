@@ -25,7 +25,7 @@ from app.services.event_service import load_government_alerts_from_path
 from app.core.middleware import MaxBodySizeMiddleware, RequestIDMiddleware, RequestTimingMiddleware, RateLimitMiddleware
 from app.core.rate_limit import limiter
 from app.db.session import AsyncSessionLocal, engine, init_db, sqlite_uses_memory_fallback
-from app.db.db_url import db_ssl_mode_label, db_target_fingerprint
+from app.db.db_url import db_ssl_mode_label, db_target_fingerprint, is_db_ssl_insecure_enabled
 from app.models.zone import Zone
 from app.tasks.background_scheduler import shutdown_background_scheduler, start_background_scheduler
 from app.utils.logger import logger
@@ -125,6 +125,8 @@ async def lifespan(app: FastAPI):
                 engine_name="main",
                 decision=db_ssl_mode_label(settings.async_database_url),
                 reason_code="DB_SSL_MODE",
+                db_ssl_insecure_env_present=os.getenv("DB_SSL_INSECURE") is not None,
+                db_ssl_insecure_enabled=is_db_ssl_insecure_enabled(),
                 **db_target_fingerprint(settings.async_database_url),
             )
 
