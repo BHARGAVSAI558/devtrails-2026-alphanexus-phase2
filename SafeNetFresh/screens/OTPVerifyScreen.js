@@ -12,14 +12,14 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { auth, workers } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const BRAND = '#1A56DB';
-const SMS_AUTOFILL_MS = 3500;
+const SMS_AUTOFILL_MS = 2000;
+const AUTOFILL_STEP_MS = 80; // ms between each digit fill for animation
 
 const isWeb = Platform.OS === 'web';
 
@@ -29,14 +29,8 @@ const isWeb = Platform.OS === 'web';
  * - or EAS env `EXPO_PUBLIC_DEMO_OTP=1` at build time
  */
 function isClientDemoOtpEnabled() {
-  try {
-    const pub = typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_DEMO_OTP;
-    if (pub === '1' || pub === 'true') return true;
-  } catch (_) {
-    /* ignore */
-  }
-  const v = Constants.expoConfig?.extra?.DEMO_MODE ?? Constants.expo?.extra?.DEMO_MODE;
-  return v === true || v === 'true';
+  // Product requirement: auto-fill random OTP quickly for demo flows.
+  return true;
 }
 
 function randomSixDigitOtp() {
@@ -63,17 +57,36 @@ export default function OTPVerifyScreen({ navigation, route }) {
     digitsRef.current = digits.join('');
   }, [digits]);
 
-  // Demo: after send-otp, auto-fill a random 6-digit code and verify (requires API DEMO_MODE).
+  // Demo: after send-otp, animate digit-by-digit fill then auto-verify.
   useEffect(() => {
     if (!demoAuto) return undefined;
     const code = demoOtpRef.current;
-    const t = setTimeout(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const t0 = setTimeout(() => {
       if (verifyInFlight.current || digitsRef.current.length > 0) return;
-      setDigits(code.split(''));
-      submittedCodeRef.current = code;
-      verifyWithCode(code);
+      // Animate each digit with a small delay
+      code.split('').forEach((d, i) => {
+        const t = setTimeout(() => {
+          setDigits((prev) => {
+            const next = [...prev];
+            next[i] = d;
+            return next;
+          });
+        }, i * AUTOFILL_STEP_MS);
+        timers.push(t);
+      });
+      // After all digits filled, verify
+      const tVerify = setTimeout(() => {
+        if (verifyInFlight.current) return;
+        submittedCodeRef.current = code;
+        verifyWithCode(code);
+      }, code.length * AUTOFILL_STEP_MS + 200);
+      timers.push(tVerify);
     }, SMS_AUTOFILL_MS);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t0);
+      timers.forEach(clearTimeout);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demoAuto]);
 
@@ -135,8 +148,9 @@ export default function OTPVerifyScreen({ navigation, route }) {
             navigation.replace('ProfileSetup');
             return;
           }
-          dispatch({ type: 'SET_PROFILE_READY', ready: false });
-          navigation.replace('ProfileSetup');
+          // If profile fetch fails transiently, keep signed-in users on dashboard path.
+          dispatch({ type: 'SET_PROFILE_READY', ready: true });
+          return;
         }
       } catch (e) {
         const msg = e?.response?.data?.detail;
@@ -206,11 +220,20 @@ export default function OTPVerifyScreen({ navigation, route }) {
       setDigits(['', '', '', '', '', '']);
       if (demoAuto) {
         const code = demoOtpRef.current;
+        const timers = [];
         setTimeout(() => {
           if (verifyInFlight.current || digitsRef.current.length > 0) return;
-          setDigits(code.split(''));
-          submittedCodeRef.current = code;
-          verifyWithCode(code);
+          code.split('').forEach((d, i) => {
+            const t = setTimeout(() => {
+              setDigits((prev) => { const next = [...prev]; next[i] = d; return next; });
+            }, i * AUTOFILL_STEP_MS);
+            timers.push(t);
+          });
+          setTimeout(() => {
+            if (verifyInFlight.current) return;
+            submittedCodeRef.current = code;
+            verifyWithCode(code);
+          }, code.length * AUTOFILL_STEP_MS + 200);
         }, SMS_AUTOFILL_MS);
       }
       if (isWeb) setTimeout(() => inputsRef.current[0]?.focus(), 0);
@@ -231,8 +254,8 @@ export default function OTPVerifyScreen({ navigation, route }) {
       <Text style={styles.subMuted}>
         {demoAuto
           ? isWeb
-            ? 'Auto-fills a random code in ~3–4s, or type any 6 digits.'
-            : 'Auto-fills in ~3–4s, or enter any 6 digits below.'
+            ? 'Auto-fills a random code in ~2s, or type any 6 digits.'
+            : 'Auto-fills in ~2s, or enter any 6 digits below.'
           : isWeb
             ? 'Type or paste the 6-digit code from your SMS (check spam folder).'
             : 'Enter the 6-digit code from your SMS.'}
@@ -329,62 +352,65 @@ export default function OTPVerifyScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc', paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: '#f8fafc', paddingHorizontal: 24 },
   kicker: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: BRAND,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 6,
+    letterSpacing: 1.2,
+    marginBottom: 8,
   },
-  header: { fontSize: 26, fontWeight: '800', color: '#111827', letterSpacing: -0.3 },
+  header: { fontSize: 28, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
   demoHint: { marginTop: 8, fontSize: 13, color: BRAND, fontWeight: '700' },
   sub: { fontSize: 15, color: '#374151', marginTop: 10, fontWeight: '600', lineHeight: 22 },
-  subMuted: { fontSize: 14, color: '#6b7280', marginTop: 6, marginBottom: 20 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  subMuted: { fontSize: 14, color: '#6b7280', marginTop: 6, marginBottom: 24 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   box: {
     flex: 1,
     aspectRatio: 1,
-    maxWidth: 52,
+    maxWidth: 54,
     borderWidth: 2,
     borderColor: '#e5e7eb',
-    borderRadius: 12,
+    borderRadius: 14,
     textAlign: 'center',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: '#111827',
     backgroundColor: '#fff',
+    ...Platform.select({ web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }, default: {} }),
   },
   webOtpInput: {
     alignSelf: 'center',
     width: '100%',
-    maxWidth: 280,
+    maxWidth: 300,
     borderWidth: 2,
     borderColor: '#e5e7eb',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    fontSize: 24,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    fontSize: 28,
     fontWeight: '800',
-    letterSpacing: 8,
+    letterSpacing: 10,
     textAlign: 'center',
     color: '#111827',
     backgroundColor: '#fff',
     marginTop: 4,
+    ...Platform.select({ web: { boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }, default: {} }),
     fontFamily: Platform.select({ web: 'SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace', default: undefined }),
   },
   boxFilled: { borderColor: BRAND, backgroundColor: '#eff6ff' },
   btn: {
     backgroundColor: BRAND,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 32,
+    ...Platform.select({ web: { boxShadow: '0 8px 24px rgba(26,86,219,0.35)' }, default: {} }),
   },
-  btnDisabled: { opacity: 0.7 },
+  btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
-  resendWrap: { marginTop: 20, alignItems: 'center' },
+  resendWrap: { marginTop: 22, alignItems: 'center' },
   resendMuted: { color: '#9ca3af', fontSize: 14 },
   resendActive: { color: BRAND, fontSize: 15, fontWeight: '700' },
   back: { marginTop: 24, alignItems: 'center' },

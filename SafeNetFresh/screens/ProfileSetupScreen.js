@@ -44,9 +44,9 @@ const HOURS = [
 ];
 
 const TIERS = [
-  { id: 'Basic', weekly: 35, daily: 350, label: 'Basic', blurb: 'Core income backup' },
-  { id: 'Standard', weekly: 49, daily: 500, label: 'Standard', blurb: 'Balanced protection', popular: true },
-  { id: 'Pro', weekly: 70, daily: 700, label: 'Pro', blurb: 'Maximum daily cover' },
+  { id: 'Basic', weekly: 49, daily: 600, label: 'Basic', blurb: 'Core income backup' },
+  { id: 'Standard', weekly: 79, daily: 800, label: 'Standard', blurb: 'Balanced protection', popular: true },
+  { id: 'Pro', weekly: 99, daily: 1100, label: 'Pro', blurb: 'Maximum daily cover' },
 ];
 
 function platformMidpoint(p) {
@@ -408,17 +408,13 @@ export default function ProfileSetupScreen({ navigation }) {
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             {headerBlue}
             <Text style={styles.stepTitle}>Where do you mainly deliver?</Text>
-            <Text style={styles.stepSub}>Search any place in India or use GPS. SafeNet maps it to the nearest zone.</Text>
+            <Text style={styles.stepSub}>Search any place in India or tap GPS. We map it to your nearest risk zone.</Text>
 
-            <View style={[styles.mapPlaceholder, { width: w - 36 }]}>
-              <Text style={styles.mapEmoji}>🗺️</Text>
-              <Text style={styles.mapHint}>Search or use current location</Text>
-            </View>
-
-            <View style={styles.searchBox}>
+            <View style={[styles.searchBox, zone && styles.searchBoxActive]}>
+              <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Select zone (e.g. Gachibowli, Vijayawada)"
+                placeholder="Search city, area or zone (e.g. Gachibowli)"
                 placeholderTextColor="#94a3b8"
                 value={placeQuery}
                 onChangeText={setPlaceQuery}
@@ -428,13 +424,7 @@ export default function ProfileSetupScreen({ navigation }) {
               />
               {placeLoading ? <ActivityIndicator size="small" color={BRAND} /> : null}
             </View>
-            {zone?.placeName ? (
-              <View style={styles.selectedPlaceCard}>
-                <Text style={styles.selectedPlaceTitle}>Chosen location</Text>
-                <Text style={styles.selectedPlaceValue}>{zone.placeName}</Text>
-              </View>
-            ) : null}
-            {placeError ? <Text style={styles.gpsError}>{placeError}</Text> : null}
+
             {placeSuggestions.length > 0 ? (
               <View style={styles.suggestionsWrap}>
                 {placeSuggestions.map((item) => (
@@ -446,9 +436,34 @@ export default function ProfileSetupScreen({ navigation }) {
                     ]}
                     onPress={() => selectSuggestedPlace(item)}
                   >
+                    <Text style={styles.suggestionPin}>📍</Text>
                     <Text style={styles.suggestionLabel}>{item.label}</Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            ) : null}
+
+            {placeError ? (
+              <View style={styles.errorCard}>
+                <Text style={styles.gpsError}>{placeError}</Text>
+              </View>
+            ) : null}
+
+            {zone ? (
+              <View style={styles.selectedZoneCard}>
+                <View style={styles.selectedZoneHeader}>
+                  <Text style={styles.selectedZoneIcon}>✅</Text>
+                  <Text style={styles.selectedZoneTitle}>Zone selected</Text>
+                </View>
+                <Text style={styles.selectedZoneValue}>{zone.placeName || zone.label}</Text>
+                <View style={styles.zoneBadgeRow}>
+                  <View style={[styles.zoneBadge, { backgroundColor: zone.riskLevel === 'high' ? '#fef2f2' : zone.riskLevel === 'low' ? '#f0fdf4' : '#fffbeb' }]}>
+                    <Text style={[styles.zoneBadgeText, { color: zone.riskLevel === 'high' ? '#dc2626' : zone.riskLevel === 'low' ? '#16a34a' : '#d97706' }]}>
+                      {String(zone.riskLevel || 'medium').toUpperCase()} RISK
+                    </Text>
+                  </View>
+                  <Text style={styles.zoneHint}>{ZONE_RISK_COPY[zone.riskLevel] || ZONE_RISK_COPY.medium}</Text>
+                </View>
               </View>
             ) : null}
 
@@ -462,22 +477,12 @@ export default function ProfileSetupScreen({ navigation }) {
             >
               {gpsLoading
                 ? <ActivityIndicator color={BRAND} size="small" />
-                : <Text style={styles.gpsBtnText}>Use current location</Text>}
+                : <>
+                    <Text style={styles.gpsBtnIcon}>📡</Text>
+                    <Text style={styles.gpsBtnText}>Use current location</Text>
+                  </>}
             </TouchableOpacity>
             {gpsError ? <Text style={styles.gpsError}>{gpsError}</Text> : null}
-
-            {zone ? (
-              <View style={styles.riskExplain}>
-                <Text style={styles.riskExplainTitle}>How we see your zone</Text>
-                <Text style={styles.riskExplainBody}>{ZONE_RISK_COPY[zone.riskLevel]}</Text>
-                <Text style={styles.riskExplainBody}>
-                  Detected place: {zone.placeName || zone.label}
-                </Text>
-                <Text style={[styles.riskExplainBody, { marginTop: 6 }]}>
-                  Mapped zone: {zone.label} · Risk: {String(zone.badge || '').toUpperCase()}
-                </Text>
-              </View>
-            ) : null}
 
             <View style={styles.rowNav}>
               <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
@@ -525,7 +530,7 @@ export default function ProfileSetupScreen({ navigation }) {
             {headerBlue}
             <Text style={styles.stepTitle}>Choose your coverage tier</Text>
             <Text style={styles.stepSub}>
-              Based on your zone risk score of {zoneScore}/100, we recommend {recommendedTier}.
+              Select a plan now. You can change later before payment.
             </Text>
 
             {TIERS.map((t) => {
@@ -705,40 +710,50 @@ const styles = StyleSheet.create({
   platformEarn: { fontSize: 14, color: '#64748b', marginTop: 8, marginLeft: 8, fontWeight: '600' },
   mapPlaceholder: {
     height: 140,
-    backgroundColor: '#e0e7ff',
+    backgroundColor: '#e8efff',
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     alignSelf: 'center',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
   },
   mapEmoji: { fontSize: 40 },
-  mapHint: { marginTop: 6, color: '#4338ca', fontWeight: '600' },
+  mapHint: { marginTop: 6, color: '#1e40af', fontWeight: '800' },
   gpsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     alignSelf: 'center',
     marginBottom: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
     borderRadius: 14,
     borderWidth: 2,
     borderColor: BRAND,
     backgroundColor: '#eff6ff',
   },
+  gpsBtnIcon: { fontSize: 16 },
   gpsBtnText: { color: BRAND, fontWeight: '800', fontSize: 15 },
   gpsError: { color: '#b91c1c', fontSize: 12, fontWeight: '600', textAlign: 'center', marginBottom: 8 },
   searchBox: {
-    borderWidth: 1.5,
-    borderColor: '#cbd5e1',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderWidth: 2,
+    borderColor: '#bfdbfe',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
+    backgroundColor: '#fff',
+    ...Platform.select({ web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }, default: {} }),
   },
-  searchInput: { flex: 1, fontSize: 16, fontWeight: '700', color: '#0f172a', minHeight: 28 },
+  searchBoxActive: { borderColor: BRAND },
+  searchIcon: { fontSize: 18 },
+  searchInput: { flex: 1, fontSize: 16, fontWeight: '600', color: '#0f172a', minHeight: 28 },
   selectedPlaceCard: {
     marginTop: 10,
     marginBottom: 8,
@@ -751,27 +766,50 @@ const styles = StyleSheet.create({
   },
   selectedPlaceTitle: { color: '#1d4ed8', fontSize: 12, fontWeight: '800', marginBottom: 4, textTransform: 'uppercase' },
   selectedPlaceValue: { color: '#0f172a', fontSize: 14, fontWeight: '700' },
+  selectedZoneCard: {
+    marginTop: 12,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#86efac',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 16,
+    padding: 16,
+  },
+  selectedZoneHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  selectedZoneIcon: { fontSize: 18 },
+  selectedZoneTitle: { fontSize: 13, fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: 0.5 },
+  selectedZoneValue: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 10 },
+  zoneBadgeRow: { gap: 8 },
+  zoneBadge: { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 6 },
+  zoneBadgeText: { fontSize: 11, fontWeight: '800' },
+  zoneHint: { fontSize: 13, color: '#475569', lineHeight: 18, fontWeight: '500' },
+  errorCard: { backgroundColor: '#fef2f2', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#fecaca' },
   suggestionsWrap: {
     maxHeight: 220,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: 14,
+    marginBottom: 12,
     overflow: 'hidden',
     backgroundColor: '#fff',
+    ...Platform.select({ web: { boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }, default: {} }),
   },
   suggestionItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   suggestionItemSelected: {
     backgroundColor: '#eff6ff',
     borderLeftWidth: 3,
     borderLeftColor: BRAND,
   },
-  suggestionLabel: { color: '#0f172a', fontWeight: '600', fontSize: 13 },
+  suggestionPin: { fontSize: 14 },
+  suggestionLabel: { color: '#0f172a', fontWeight: '600', fontSize: 14, flex: 1 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: {
     paddingVertical: 10,

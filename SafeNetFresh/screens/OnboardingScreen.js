@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { auth, warmBackendOnce, formatApiError } from '../services/api';
+import { auth, warmBackendOnce, formatApiError, isServerWaking } from '../services/api';
 
 const BRAND = '#1A56DB';
 
@@ -24,10 +24,17 @@ export default function OnboardingScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [sentNotice, setSentNotice] = useState('');
+  const [serverWaking, setServerWaking] = useState(false);
 
   React.useEffect(() => {
     // Pre-warm backend when onboarding opens to reduce first OTP send latency.
     void warmBackendOnce();
+    // Show waking notice after 2s if still loading
+    const t = setTimeout(() => {
+      if (isServerWaking()) setServerWaking(true);
+    }, 2000);
+    const t2 = setTimeout(() => setServerWaking(false), 15000);
+    return () => { clearTimeout(t); clearTimeout(t2); };
   }, []);
 
   const handleSendOtp = async () => {
@@ -103,6 +110,10 @@ export default function OnboardingScreen({ navigation }) {
         </TouchableOpacity>
 
         {sentNotice ? <Text style={styles.sentNotice}>{sentNotice}</Text> : null}
+
+        {serverWaking ? (
+          <Text style={styles.wakingNotice}>⏳ Starting server… please wait 10 seconds.</Text>
+        ) : null}
 
         <Text style={styles.terms}>By continuing, you agree to our Terms and Privacy Policy</Text>
 
@@ -205,6 +216,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#059669',
     textAlign: 'center',
+  },
+  wakingNotice: {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#d97706',
+    textAlign: 'center',
+    backgroundColor: '#fffbeb',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   terms: { fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 14 },
   trustRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 22, gap: 8 },

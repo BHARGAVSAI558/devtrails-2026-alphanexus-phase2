@@ -17,18 +17,12 @@ const inferExpoHostURL = () => {
 };
 
 const getBackendURL = () => {
-  // 1. Explicit env var override
   try {
     const envPublic =
       typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_URL;
     if (envPublic && String(envPublic).trim().startsWith('http')) {
       const normalized = String(envPublic).trim().replace(/\/$/, '');
-      // If phone app is configured with localhost/127, it cannot reach PC loopback.
-      if (
-        Platform.OS !== 'web' &&
-        /localhost|127\.0\.0\.1/i.test(normalized)
-      ) {
-        // Allow local inference only in development (Expo Go / local debug).
+      if (Platform.OS !== 'web' && /localhost|127\.0\.0\.1/i.test(normalized)) {
         if (__DEV__) {
           const inferred = inferExpoHostURL();
           if (inferred) return inferred;
@@ -40,17 +34,13 @@ const getBackendURL = () => {
     }
   } catch (_) { /* ignore */ }
 
-  // 2. app.json extra
   const extraUrl =
     Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
     Constants.expoConfig?.extra?.API_URL ||
     Constants.expoConfig?.extra?.BACKEND_URL;
   if (extraUrl && String(extraUrl).trim().startsWith('http')) {
     const normalized = String(extraUrl).trim().replace(/\/$/, '');
-    if (
-      Platform.OS !== 'web' &&
-      /localhost|127\.0\.0\.1/i.test(normalized)
-    ) {
+    if (Platform.OS !== 'web' && /localhost|127\.0\.0\.1/i.test(normalized)) {
       if (__DEV__) {
         const inferred = inferExpoHostURL();
         if (inferred) return inferred;
@@ -61,7 +51,6 @@ const getBackendURL = () => {
     return normalized;
   }
 
-  // 3. Production fallback
   return 'https://safenet-api-y4se.onrender.com';
 };
 
@@ -71,19 +60,13 @@ export const BACKEND_URL = BASE_URL;
 function _isLikelyLocalApi(url) {
   if (!url || typeof url !== 'string') return false;
   if (/localhost|127\.0\.0\.1|10\.0\.2\.2/i.test(url)) return true;
-  // Private LAN (phone -> PC hotspot / Wi‑Fi)
   if (/^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(url)) return true;
   if (/onrender\.com|amazonaws\.com|vercel\.app/i.test(url)) return false;
   return /:\d{4,5}(\/|$)/i.test(url);
 }
 
-/** Hosted APIs: cold start. Local: keep moderate; retries on timeout are disabled so failures are fast. */
-const TIMEOUT_MS = /onrender\.com|render\.com|amazonaws\.com|vercel\.app/i.test(BACKEND_URL)
-  ? 90000
-  : _isLikelyLocalApi(BACKEND_URL)
-    ? 90000
-    : 30000;
-
+/** 30 s gives Render cold-starts enough headroom; warmup ping uses 15 s. */
+const TIMEOUT_MS = 30000;
 
 const api = axios.create({
   baseURL: `${BACKEND_URL}/api/v1`,
@@ -92,17 +75,19 @@ const api = axios.create({
 });
 
 let _warmupPromise = null;
-/**
- * Best-effort API warm-up to reduce first OTP/login delay when hosted backend is cold.
- */
+let _isServerWaking = false;
+
 export function warmBackendOnce() {
   if (_warmupPromise) return _warmupPromise;
+  _isServerWaking = true;
   _warmupPromise = axios
-    .get(`${BACKEND_URL}/health`, { timeout: 8000 })
-    .then(() => {})
-    .catch(() => {});
+    .get(`${BACKEND_URL}/health`, { timeout: 15000 }) // warmup only
+    .then(() => { _isServerWaking = false; })
+    .catch(() => { _isServerWaking = false; });
   return _warmupPromise;
 }
+
+export function isServerWaking() { return _isServerWaking; }
 
 let onUnauthorized = null;
 
@@ -140,16 +125,16 @@ api.interceptors.response.use(
 
 axiosRetry(api, {
   retries: 1,
-  retryDelay: axiosRetry.exponentialDelay,
+  retryDelay: () => 2000,
   retryCondition: (error) => {
-    const code = error?.code;
-    const msg = String(error?.message || '');
-    if (code === 'ECONNABORTED' || msg.toLowerCase().includes('timeout')) {
-      return true;
-    }
+    // Never retry client errors
     const status = error?.response?.status;
-    const isRetryableStatus = [502, 503, 504].includes(status);
-    return isRetryableStatus;
+    if ([400, 401, 403, 404, 422].includes(status)) return false;
+    const code = error?.code;
+    const msg = String(error?.message || '').toLowerCase();
+    if (code === 'ECONNABORTED' || code === 'ERR_NETWORK') return true;
+    if (msg.includes('timeout') || msg.includes('network')) return true;
+    return [502, 503, 504].includes(status);
   },
 });
 
@@ -162,36 +147,26 @@ export function formatApiError(error) {
   if (status === 401 || (status === 404 && detail.includes('user not found'))) {
     return 'Your session expired. Please sign in again.';
   }
-  if (status === 503 || status === 502 || status === 504) {
-    return 'SafeNet is temporarily unavailable. Please try again in a moment.';
+  if ([502, 503, 504].includes(status)) {
+    return 'Unable to reach server right now. Please try again in a moment.';
   }
   if (!error?.response) {
-    const msg = String(error?.message || '');
-    const noTcp =
-      error?.code === 'ECONNABORTED' ||
-      msg.toLowerCase().includes('timeout') ||
-      error?.code === 'ERR_NETWORK' ||
-      msg.toLowerCase().includes('network error');
-    if (noTcp) {
-      return `No response from ${BACKEND_URL}.\n\n• Same PC + Expo Web: use http://127.0.0.1:8000 in EXPO_PUBLIC_API_URL.\n• Phone / another device: uvicorn --host 0.0.0.0 --port 8000, correct LAN IP in .env, Windows: npm run windows:firewall-api (Admin). Open ${BACKEND_URL}/docs in that device’s browser.\n• Hosted: cold start — retry or use the hosted URL.\n• React DevTools message is optional; it is unrelated to this error.`;
-    }
-    return 'We could not reach SafeNet. Check your internet connection and try again.';
+    const msg = String(error?.message || '').toLowerCase();
+    const isTimeout = error?.code === 'ECONNABORTED' || msg.includes('timeout');
+    const isNetwork = error?.code === 'ERR_NETWORK' || msg.includes('network error');
+    if (isTimeout) return 'Server is starting, please wait a few seconds.';
+    if (isNetwork) return 'Unable to reach server right now. Check your connection.';
+    return 'Unable to reach server right now. Check your internet connection and try again.';
   }
   const d = error?.response?.data?.detail;
-  if (typeof d === 'string') {
-    return d;
-  }
+  if (typeof d === 'string') return d;
   if (Array.isArray(d)) {
     const parts = d
       .map((x) => (typeof x?.msg === 'string' ? x.msg : typeof x?.message === 'string' ? x.message : null))
       .filter(Boolean);
-    if (parts.length) {
-      return parts.join('\n');
-    }
+    if (parts.length) return parts.join('\n');
   }
-  if (status === 422) {
-    return 'Some information could not be saved. Please review your details and try again.';
-  }
+  if (status === 422) return 'Some information could not be saved. Please review your details and try again.';
   return 'Something went wrong. Please try again.';
 }
 
@@ -204,7 +179,6 @@ export const auth = {
   refresh: async (refreshToken) => unwrap(await api.post('/auth/refresh', { refresh_token: refreshToken })),
 };
 
-/** Gig-worker onboarding profile + policy activation (POST /api/v1/profile) */
 export const gigProfile = {
   submit: async (body) => unwrap(await api.post('/profile', body)),
 };
@@ -227,14 +201,11 @@ export const workers = {
 };
 
 export const policies = {
-  /** Full coverage snapshot from GET /policies/current */
   getCurrent: async () => unwrap(await api.get('/policies/current')),
-  /** Legacy list (optional) */
   list: async () => unwrap(await api.get('/policies')),
   quote: async (workerId, tier) =>
     unwrap(await api.get('/policies/quote', { params: { worker_id: workerId, tier } })),
   activate: async (body) => unwrap(await api.post('/policies/activate', body)),
-  /** Razorpay Checkout: create order (paise amount + key) */
   createOrder: async (workerId, tier, policyId = null) =>
     unwrap(
       await api.post('/policies/create-order', {
@@ -256,9 +227,7 @@ export const claims = {
   getActive: async () => {
     try {
       const raw = unwrap(await api.get('/claims/active'));
-      // Backend returns flat array directly
       if (Array.isArray(raw)) return raw;
-      // Legacy: wrapped in disruptions key
       if (Array.isArray(raw?.disruptions)) return raw.disruptions;
       return [];
     } catch { return []; }

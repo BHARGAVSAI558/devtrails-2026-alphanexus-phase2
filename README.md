@@ -6,16 +6,18 @@
 
 ---
 
-## 🚀 Live Demo — Try It Now
+## 🚀 Live Demo
 
 | | URL |
 |--|--|
-| 📱 **Worker App** | **[https://safenet-sage.vercel.app](https://safenet-sage.vercel.app)** |
+| 📱 **Worker App** (Highly Recommended) | **[https://safenet-sage.vercel.app](https://safenet-sage.vercel.app)** |
 | 🔗 **Unified Entry** | **[https://safenet-admin-wine.vercel.app/login](https://safenet-admin-wine.vercel.app/login)** |
 | 🖥️ **Admin Dashboard** | **[https://safenet-admin-wine.vercel.app/admin-login](https://safenet-admin-wine.vercel.app/admin-login)** |
 | ⚙️ **Backend API** | [https://safenet-api-y4se.onrender.com](https://safenet-api-y4se.onrender.com) |
 | ❤️ **Health Check** | [https://safenet-api-y4se.onrender.com/health](https://safenet-api-y4se.onrender.com/health) |
 | 💻 **GitHub** | [devtrails-2026-alphanexus-phase2](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2) |
+
+> **Note:** Backend is hosted on Render free tier — first request may take 10–15 seconds to wake up. The app shows "Starting server… please wait" during this time.
 
 ---
 
@@ -24,16 +26,18 @@
 ### As a Worker (phone or browser):
 
 1. Open **[https://safenet-sage.vercel.app](https://safenet-sage.vercel.app)**
-2. Enter any 10-digit mobile number → OTP shown on screen → enter it
-3. Select platform (Zomato / Swiggy / Zepto) → search your delivery area or tap GPS → coverage tier
+2. Enter any 10-digit mobile number → OTP auto-fills in ~2 seconds (animated digit-by-digit) → auto-verifies
+3. Select platform (Zomato / Swiggy / Other) → search your delivery area or tap GPS → coverage tier
 4. Dashboard shows **live weather**, **real AQI**, **your Earnings DNA heatmap**, and zone risk
 5. Tap **"Simulate disruption"** → pick Heavy Rain → watch the 6-step claim pipeline execute live → see payout amount credited
 
 ### As an Admin (same time, on laptop):
 
 1. Open **[https://safenet-admin-wine.vercel.app/admin-login](https://safenet-admin-wine.vercel.app/admin-login)**
-2. Login: `admin` / `admin123`
+2. Login: `admin` / `admin123` (auto-fills after 3.5s)
 3. Watch the claim from step 5 above arrive **live in the dashboard feed** via WebSocket — no refresh needed
+
+**QR code available** on the unified entry page for direct mobile Expo Go access.
 
 ---
 
@@ -85,11 +89,17 @@ Sunday   [ ░   ▒   ▓   █   █   ▒   ▒   ▓   ░  ] ← Peak 12–
 
 For new workers: zone baseline rates apply (₹80–₹120/hr by risk level) until enough claim history accumulates.
 
-**What the worker sees on their dashboard:**
-- Live demand level: High / Moderate / Low for current hour
-- Expected earnings: ₹85–₹110/hr right now in your zone
-- Next peak window prediction
-- Weekly progress: ₹649 / ₹8,929 expected this week
+---
+
+## 💳 Coverage Tiers
+
+| Tier | Weekly Premium | Protected Amount |
+|------|---------------|-----------------|
+| Basic | ₹49/week | Up to ₹600 |
+| Standard | ₹79/week | Up to ₹800 |
+| Pro | ₹99/week | Up to ₹1,100 |
+
+Workers select a plan during onboarding and can change it later before payment. Premiums are dynamically adjusted by zone risk and worker trust score via XGBoost ML model.
 
 ---
 
@@ -107,8 +117,6 @@ During disruption:
   Payout calculated at upgraded Pro tier automatically
   Message: "SafeNet predicted this 18 hours ago and upgraded your cover"
 ```
-
-This is the opposite of how traditional insurance works. Protection upgrades itself.
 
 ---
 
@@ -144,8 +152,6 @@ Razorpay payout recorded + WebSocket push to worker app + admin dashboard
 Disruption Detected ● → Verifying Signals ● → Fraud Check ● → Decision ● → ₹ Credited ●
 ```
 
-Each step updates live on screen. Zero action required.
-
 ---
 
 ## 🕵️ 4-Layer Fraud Engine
@@ -168,20 +174,29 @@ LAYER 2 — Cross-Signal Corroboration (4 independent signals)
   S4: Did platform order volume drop in this zone?
   4/4 → APPROVE · 3/4 → APPROVE · 2/4 → FLAG · 1/4 → BLOCK
               ↓
-LAYER 3 — Fraud Ring Detection
+LAYER 3 — Fraud Ring Detection (DBSCAN-style cluster analysis)
   Zone density spike (8+ flagged claims in 1 hour)
   Timestamp synchrony (5+ submissions within 3 minutes)
   Pattern homogeneity (identical inactivity durations)
   → CONFIRMED ring → freeze cluster payouts → admin alert
 ```
 
-**Honest-worker-first principle:** 3 of 4 signals still approves. A temporary API delay should never punish a genuine worker. SafeNet delays before it denies.
+**Honest-worker-first principle:** 3 of 4 signals still approves. A temporary API delay should never punish a genuine worker.
+
+---
+
+## 🤖 AI Risk Scoring & Priority Scoring
+
+- **XGBoost premium model** trained on zone risk, worker history, weather patterns, and trust score
+- **Priority scoring** on support tickets — high-urgency tickets (payment, safety) surface first in admin queue
+- **Zero-day detector** — mass offline events detected via DBSCAN anomaly detection; admin alerted before claims are processed
+- **Trust engine** — per-worker trust score updated after each claim; high-trust workers get faster approvals
 
 ---
 
 ## 📍 Location System
 
-Workers search any place in India (powered by Nominatim / OpenStreetMap — no API key restrictions) or use device GPS. Location is reverse-geocoded and matched to the nearest SafeNet zone using the Haversine formula. Works anywhere in India, not just preset cities.
+Workers search any place in India (powered by Nominatim / OpenStreetMap — no API key restrictions) or use device GPS. Location is reverse-geocoded and matched to the nearest SafeNet zone using the Haversine formula.
 
 - Search "Gachibowli" → suggestions appear as you type → select → zone + risk level shown instantly
 - "Detect my location" → device GPS → reverse geocode → zone assigned
@@ -189,15 +204,43 @@ Workers search any place in India (powered by Nominatim / OpenStreetMap — no A
 
 ---
 
+## 🔐 Authentication & Security
+
+- **OTP-based auth** — 6-digit code, demo-safe (any 6 digits accepted in DEMO_MODE)
+- **JWT tokens** — access + refresh token pair, stored securely per platform
+- **Returning users** — after OTP login, profile and plan are detected automatically; dashboard loads directly without re-onboarding
+- **Device fingerprinting** — hardware fingerprint stored per worker for fraud correlation
+- **Rate limiting** — per-IP limits on sensitive endpoints
+
+---
+
 ## 💬 Support Assistant — Multilingual
 
-Floating assistant accessible from every screen with no navigation required.
+Floating assistant accessible from every screen.
 
 - **Predefined queries:** Why didn't I get paid? What is my claim status? Is there a disruption now?
 - **Raise Ticket:** generates unique ticket ID (TKT-000001), tracked in admin queue
 - **Languages:** English / हिंदी / తెలుగు — all built-in, no external translation API
-- **Voice input:** browser Speech Recognition (Chrome/Edge on web); expo-speech-recognition on native; graceful text fallback in Expo Go
+- **Voice input:** browser Speech Recognition (Chrome/Edge on web); graceful text fallback in Expo Go
 - **Admin reply loop:** admin responds from dashboard → reply pushed to worker's chat via WebSocket → notification triggered
+
+---
+
+## 🔔 Notifications
+
+- Push notifications via Expo Notifications (native) and browser Notification API (web)
+- Real-time WebSocket push for claim updates, payout credits, disruption alerts
+- Admin can send replies to worker support tickets; worker receives notification instantly
+
+---
+
+## 💰 Payments
+
+Workers add their bank account (holder name, IFSC, account number) or UPI ID in their Profile. Approved payouts are recorded via Razorpay test mode and linked to the claim record with payout ID and status.
+
+- UPI deep-link opens native UPI app on mobile
+- Card and netbanking flows available in-app
+- All payment records stored in PostgreSQL with full audit trail
 
 ---
 
@@ -205,18 +248,13 @@ Floating assistant accessible from every screen with no navigation required.
 
 | Page | What it shows |
 |------|--------------|
-| Dashboard | Live KPIs: active workers, claims today, fraud blocked, pool utilization %, weekly premiums collected vs paid out |
+| Dashboard | Live KPIs: active workers, claims today, fraud blocked, pool utilization %, weekly premiums vs paid out |
 | Zone Heatmap | All zones on map — color by risk level, size by worker count, click for zone stats |
 | Fraud Insights | Fraud queue with layer breakdown, score distribution chart, enrollment vs weather signal timeline |
 | Workers | Searchable registry — trust score, tier, premium, claims count, fraud flags; click any worker for full profile + claim history |
+| Claims | Live claim feed from pipeline — real-time WebSocket updates + DB fallback |
 | Simulations | Run any disruption scenario from admin side and inspect pipeline outcomes |
 | Support | All user tickets with admin reply interface, resolve/open status toggle, multilingual messages |
-
----
-
-## 💰 Bank & UPI Payout Details
-
-Workers add their bank account (holder name, IFSC, account number) or UPI ID in their Profile. Claims screen includes a quick "View bank details" shortcut. Approved payouts are recorded via Razorpay test mode and linked to the claim record with payout ID and status.
 
 ---
 
@@ -280,7 +318,7 @@ Workers add their bank account (holder name, IFSC, account number) or UPI ID in 
 | AQI data | ✅ Live | OpenAQ API — real PM2.5 values |
 | Location search | ✅ Real | Nominatim — works anywhere in India |
 | GPS detection | ✅ Real | Device GPS + reverse geocode + zone mapping |
-| OTP system | ✅ Real (demo-safe) | Random 6-digit OTP shown on screen |
+| OTP system | ✅ Real (demo-safe) | Random 6-digit OTP, animated auto-fill |
 | Fraud engine | ✅ Fully coded | All 4 layers execute on every claim |
 | ML premium | ✅ Real model | XGBoost trained on risk features |
 | WebSockets | ✅ Real | Live bidirectional push updates |
@@ -288,6 +326,8 @@ Workers add their bank account (holder name, IFSC, account number) or UPI ID in 
 | Forecast Shield | ✅ Real | 48-hour forecast from OpenWeatherMap |
 | Multilingual | ✅ Real | Built-in EN / HI / TE — no translation API |
 | Payouts | ✅ Real logic | DNA formula + Razorpay test-mode records |
+| Priority scoring | ✅ Real | Support ticket urgency scoring in DB |
+| DBSCAN anomaly | ✅ Real | Zero-day mass offline detector |
 | Payment collection | 🔶 Test mode | Razorpay Checkout in test — no real money |
 
 ---
@@ -296,7 +336,7 @@ Workers add their bank account (holder name, IFSC, account number) or UPI ID in 
 
 **Browser (no install):** [https://safenet-sage.vercel.app](https://safenet-sage.vercel.app) — works on any phone or desktop
 
-**Expo Go (native):** Install Expo Go → scan QR or open:
+**Expo Go (native):** Install Expo Go → scan QR on the entry page or open:
 ```
 exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/278ac272-c5ef-40dc-beb2-25d1c58cae8e
 ```
@@ -313,40 +353,78 @@ npm install && npm start
 ## 📁 Project Structure
 
 ```
-devtrails-2026-alphanexus-phase2/
+alpha/                               ← Repository root
 │
 ├── SafeNetFresh/                    ← Expo app (mobile + web)
-│   ├── screens/                     ← Onboarding, Dashboard, Claims,
-│   │                                   Coverage, Account, Support flows
-│   ├── components/                  ← AppModal, AssistantModal,
-│   │                                   WebSocketBridge, LocationGate
-│   ├── contexts/                    ← Auth, Claims, Policy,
-│   │                                   Localization, WebSocket
+│   ├── screens/
+│   │   ├── OnboardingScreen.js      ← Phone entry + OTP send
+│   │   ├── OTPVerifyScreen.js       ← Animated OTP auto-fill + verify
+│   │   ├── ProfileSetupScreen.js    ← 5-step onboarding wizard
+│   │   ├── DashboardScreen.js       ← Live weather, AQI, DNA heatmap
+│   │   ├── PolicyScreen.js          ← Coverage tiers + payment gateway
+│   │   ├── ClaimsScreen.js          ← Claim history + live pipeline
+│   │   ├── ProfileScreen.js         ← Bank/UPI details, account settings
+│   │   └── NotificationsScreen.js   ← Push notification history
+│   ├── components/
+│   │   ├── WebSocketBridge.js       ← WS connection lifecycle
+│   │   ├── AssistantModal.js        ← Multilingual support chat
+│   │   ├── DisruptionModal.js       ← Live disruption alert overlay
+│   │   └── LocationGate.js          ← GPS permission + zone detection
+│   ├── contexts/
+│   │   ├── AuthContext.js           ← JWT + profile state
+│   │   ├── ClaimContext.js          ← Live claim updates
+│   │   ├── PolicyContext.js         ← Coverage state
+│   │   └── LocalizationContext.js   ← EN/HI/TE i18n
+│   ├── services/
+│   │   ├── api.js                   ← Axios client, all API calls
+│   │   └── websocket.service.js     ← WS connection + reconnect
 │   ├── locales/                     ← en.json, hi.json, te.json
-│   ├── services/                    ← api.js, websocket,
-│   │                                   notifications, fingerprint
-│   ├── utils/                       ← i18n, Razorpay checkout,
-│   │                                   location display, IST formatting
-│   └── hooks/                       ← worker profile, GPS zone,
-│                                       payouts, DNA
+│   └── hooks/
+│       ├── useWorkerProfile.js      ← Profile + trust score
+│       ├── useGPSZoneDetection.js   ← GPS → zone mapping
+│       └── usePayoutHistory.js      ← Payout records
 │
 └── safenet_v2/
-    ├── backend/                     ← FastAPI (Render)
+    ├── backend/                     ← FastAPI (deployed on Render)
     │   └── app/
-    │       ├── engines/             ← confidence, fraud (L1–L4),
-    │       │                           premium, payout, behavioral
-    │       ├── services/            ← weather, AQI, OTP, realtime,
-    │       │                           notifications
-    │       ├── models/              ← PostgreSQL schemas
+    │       ├── api/v1/routes/
+    │       │   ├── admin.py         ← All admin endpoints + claims/live
+    │       │   ├── auth.py          ← OTP send/verify, JWT issue
+    │       │   ├── claims.py        ← Claim history, payouts, receipts
+    │       │   ├── policies.py      ← Coverage CRUD + Razorpay orders
+    │       │   ├── workers.py       ← Profile, dashboard, DNA
+    │       │   ├── zones.py         ← Zone data, forecast, risk mode
+    │       │   └── websockets.py    ← WS endpoints for worker + admin
+    │       ├── engines/
+    │       │   ├── fraud/           ← Layer 1–4 fraud pipeline
+    │       │   ├── confidence_engine.py  ← Weather+AQI signal scoring
+    │       │   ├── payout_engine.py      ← DNA-based payout calculation
+    │       │   ├── premium_engine.py     ← XGBoost premium pricing
+    │       │   ├── trust_engine.py       ← Per-worker trust scoring
+    │       │   └── zero_day_detector.py  ← DBSCAN mass offline detection
+    │       ├── services/
+    │       │   ├── earnings_dna_service.py   ← 7×24 DNA matrix
+    │       │   ├── forecast_shield_service.py ← 48h forecast upgrade
+    │       │   ├── weather_service.py         ← OpenWeatherMap
+    │       │   └── aqi_service.py             ← OpenAQ
+    │       ├── models/              ← SQLAlchemy ORM models
     │       ├── tasks/               ← APScheduler background jobs
-    │       └── ml/                  ← XGBoost premium model
+    │       └── ml/                  ← XGBoost model + trainer
     │
-    └── admin/                       ← React dashboard (Vercel)
+    └── admin/                       ← React dashboard (deployed on Vercel)
         └── src/
-            ├── pages/               ← Dashboard, Zones, Fraud,
-            │                           Workers, Simulations, Support
-            ├── stores/              ← Zustand real-time state
-            └── services/            ← WebSocket admin feed
+            ├── pages/
+            │   ├── Login.tsx        ← Unified entry (worker QR + admin)
+            │   ├── AdminLogin.tsx   ← Enterprise admin login
+            │   ├── Dashboard.tsx    ← Live KPIs + claim feed
+            │   ├── Claims.tsx       ← Claims feed (WS + DB)
+            │   ├── Workers.tsx      ← Worker registry + profiles
+            │   ├── FraudInsights.tsx ← Fraud analytics
+            │   ├── ZoneHeatmap.tsx  ← Leaflet zone map
+            │   └── SupportQueries.tsx ← Ticket management
+            ├── stores/              ← Zustand: auth, claims, fraud, pool
+            └── services/
+                └── admin_websocket.ts ← Admin WS multiplexed feed
 ```
 
 ---
@@ -389,11 +467,49 @@ DATABASE_URL=postgresql+asyncpg://user:pass@host/dbname
 
 ---
 
-*DevTrails 2026 — Team AlphaNexus*
+## ⚙️ Production Reliability
+
+### Cold Start Handling
+The backend runs on Render free tier and may sleep after inactivity. Both apps handle this gracefully:
+- A background warmup ping fires immediately when the login/onboarding screen opens (`/health` endpoint, 15 s timeout)
+- If the first request times out, the UI shows **"Server is starting, please wait a few seconds."** — never a raw error
+- The admin login shows **"Reconnecting..."** for 3 s then settles to the waking message
+- Worker app onboarding shows **"⏳ Starting server… please wait 10 seconds."**
+
+### Timeout Configuration
+| Layer | Main requests | Warmup ping |
+|-------|--------------|-------------|
+| Admin (`api.ts`) | 30 s | 15 s |
+| Worker (`api.js`) | 30 s | 15 s |
+
+### Retry Logic
+Both apps retry **once** (2 s delay) on transient failures only:
+
+| Condition | Retried |
+|-----------|--------|
+| `ECONNABORTED` (timeout) | ✅ |
+| `ERR_NETWORK` (unreachable) | ✅ |
+| 502 / 503 / 504 (gateway) | ✅ |
+| 400 / 401 / 403 / 404 / 422 | ❌ never |
+
+### User-Facing Error Messages
+| Situation | Message shown |
+|-----------|---------------|
+| Timeout / cold start | "Server is starting, please wait a few seconds." |
+| Retrying | "Reconnecting..." |
+| Network unreachable | "Unable to reach server right now. Check your connection." |
+| Gateway error (502–504) | "Unable to reach server right now. Please try again in a moment." |
+| Bad credentials | "Invalid username or password." |
+
+### WebSocket Live Updates
+- Worker WebSocket connects only after the dashboard is fully loaded (inside `ProtectedMainTabs`) — no startup overhead
+- Admin WebSocket multiplexes claim updates, fraud alerts, zone events, and pool health on a single connection
+- Both clients reconnect automatically with exponential back-off (max 30 s) on disconnect
+- Admin Claims page merges live WS events at the top of the DB-fetched list with a green live indicator dot
 
 ---
 
-## Submission Quick Links (Update Before Final Submit)
+## Submission Quick Links
 
 ### Pitch Deck
 [Add public pitch deck link here](https://example.com/pitch-deck)
@@ -405,3 +521,7 @@ DATABASE_URL=postgresql+asyncpg://user:pass@host/dbname
 Worker App: [https://safenet-sage.vercel.app](https://safenet-sage.vercel.app)  
 Admin Dashboard: [https://safenet-admin-wine.vercel.app](https://safenet-admin-wine.vercel.app)  
 Backend API: [https://safenet-api-y4se.onrender.com](https://safenet-api-y4se.onrender.com)
+
+---
+
+*DevTrails 2026 — Team AlphaNexus*

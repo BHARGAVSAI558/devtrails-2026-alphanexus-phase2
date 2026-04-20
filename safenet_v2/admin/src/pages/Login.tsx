@@ -4,116 +4,132 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const navigate = useNavigate();
   const workerAppUrl = 'https://safenet-sage.vercel.app';
-  const expoDeepLink = 'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/278ac272-c5ef-40dc-beb2-25d1c58cae8e';
+  const expoDeepLink =
+    'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/278ac272-c5ef-40dc-beb2-25d1c58cae8e';
+
   const goToAdminLogin = () => {
-    navigate('/admin-login', {
-      state: { username: 'admin', password: 'admin123' },
-    });
+    navigate('/admin-login', { state: { username: 'admin', password: 'admin123' } });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <section className="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-6 text-center text-white shadow-lg">
-        <div className="mx-auto max-w-5xl">
-          <img src="/favicon.svg" alt="SafeNet logo" className="mx-auto h-14 w-14 rounded-xl bg-white/15 p-1.5" />
-          <h1 className="mt-5 text-4xl font-extrabold leading-tight md:text-6xl">SafeNet</h1>
-          <p className="mt-3 text-lg font-semibold text-blue-50 md:text-2xl">AI Income Protection for Gig Workers</p>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-100 md:text-base">
-            Parametric insurance that pays workers exactly what they lose.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold md:text-sm">
-            <span className="rounded-full bg-white/15 px-4 py-2 ring-1 ring-white/30">🔴 Live Backend</span>
-            <span className="rounded-full bg-white/15 px-4 py-2 ring-1 ring-white/30">⚡ Real-time WebSockets</span>
-            <span className="rounded-full bg-white/15 px-4 py-2 ring-1 ring-white/30">🤖 ML-Powered</span>
-          </div>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e1b4b 100%)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Hero Header */}
+      <header style={{ textAlign: 'center', padding: '56px 24px 40px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+          <img src="/favicon.svg" alt="SafeNet" style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(255,255,255,0.12)', padding: 6 }} />
+          <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>SafeNet</span>
         </div>
-      </section>
+        <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.75)', maxWidth: 520, margin: '0 auto 24px', lineHeight: 1.6 }}>
+          AI-powered income protection for India's 15M+ gig delivery workers
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
+          {['🔴 Live Backend', '⚡ Real-time WebSockets', '🤖 ML-Powered', '🛡️ Zero-Touch Claims'].map((tag) => (
+            <span key={tag} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 999, padding: '6px 16px', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </header>
 
-      <main className="py-6">
-        <section className="mx-auto grid max-w-6xl gap-6 px-4 md:grid-cols-2">
-          <article className="rounded-2xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
-            <h2 className="text-xl font-semibold text-slate-900">📱 Try the Worker App</h2>
-            <p className="mt-2 text-sm text-gray-500">Try the worker experience</p>
-            <div className="mt-4 rounded-xl bg-blue-50 p-4 text-center">
-              <h3 className="text-base font-semibold text-blue-900">📱 Mobile App (Recommended)</h3>
-              <div className="mt-3 flex justify-center">
-                <img src="/worker-app-qr.png" alt="Worker app QR code" className="h-[230px] w-[230px] rounded-md shadow-sm" />
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px 60px' }}>
+        {/* Two main cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 32 }}>
+          {/* Worker App Card */}
+          <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24, padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <span style={{ fontSize: 28 }}>📱</span>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>Worker App</h2>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 24, lineHeight: 1.5 }}>
+              Experience the full worker journey — OTP login, coverage selection, live disruption claims.
+            </p>
+
+            {/* QR Section */}
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, textAlign: 'center', marginBottom: 20, border: '1px solid rgba(255,255,255,0.1)' }}>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>Scan with Expo Go</p>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <img src="/worker-app-qr.png" alt="Worker app QR code" style={{ width: 200, height: 200, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }} />
               </div>
-              <p className="mt-3 text-sm text-blue-800">Scan with Expo Go</p>
-              <p className="mt-1 text-xs text-blue-700">Best experience: Mobile app</p>
-              <a
-                href={expoDeepLink}
-                className="mt-2 inline-block text-xs font-semibold text-blue-700 underline underline-offset-2"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open Expo link directly
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 12 }}>Best experience on mobile</p>
+              <a href={expoDeepLink} target="_blank" rel="noreferrer" style={{ color: '#60a5fa', fontSize: 12, fontWeight: 700, textDecoration: 'none', display: 'inline-block', marginTop: 6 }}>
+                Open Expo link directly →
               </a>
             </div>
-            <div className="mt-6 border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-800">🌐 Web Version</h3>
-              <a
-                href={workerAppUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
-              >
-                Open Worker App (Web)
-              </a>
-              <p className="mt-2 text-xs text-gray-500">
-                <a href={workerAppUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">
-                  {workerAppUrl}
-                </a>
-              </p>
-            </div>
-          </article>
 
-          <article className="rounded-2xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
-            <h2 className="text-xl font-semibold text-slate-900">🖥️ Admin Dashboard</h2>
-            <p className="mt-2 text-sm text-gray-500">Monitor claims and zone analytics live</p>
-            <div className="mt-4 rounded bg-gray-100 p-3 text-sm text-slate-700">
-              <p>
-                Username: <span className="font-mono font-semibold">admin</span>
-              </p>
-              <p className="mt-1">
-                Password: <span className="font-mono font-semibold">admin123</span>
-              </p>
+            <a
+              href={workerAppUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #2563eb, #4f46e5)', color: '#fff', borderRadius: 14, padding: '14px 20px', fontWeight: 800, fontSize: 15, textDecoration: 'none', boxShadow: '0 8px 24px rgba(37,99,235,0.4)', transition: 'opacity 0.2s' }}
+            >
+              🌐 Open Worker App (Web)
+            </a>
+            <p style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{workerAppUrl}</p>
+          </div>
+
+          {/* Admin Dashboard Card */}
+          <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24, padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <span style={{ fontSize: 28 }}>🖥️</span>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>Admin Dashboard</h2>
             </div>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 24, lineHeight: 1.5 }}>
+              Monitor live claims, fraud signals, zone heatmaps, and worker analytics in real time.
+            </p>
+
+            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Demo Credentials</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Username</span>
+                <code style={{ color: '#a5f3fc', fontWeight: 700, fontSize: 14 }}>admin</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Password</span>
+                <code style={{ color: '#a5f3fc', fontWeight: 700, fontSize: 14 }}>admin123</code>
+              </div>
+            </div>
+
+            <div style={{ flex: 1 }} />
+
             <button
               type="button"
               onClick={goToAdminLogin}
-              className="mt-4 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
+              style={{ background: 'linear-gradient(135deg, #059669, #0d9488)', color: '#fff', border: 'none', borderRadius: 14, padding: '16px 20px', fontWeight: 800, fontSize: 16, cursor: 'pointer', boxShadow: '0 8px 24px rgba(5,150,105,0.4)', width: '100%' }}
             >
-              🖥 Sign in as Admin →
+              Sign in as Admin →
             </button>
-            <p className="mt-3 text-xs text-slate-500">Live WebSocket feed • Fraud detection • Zone heatmap</p>
-          </article>
-        </section>
+            <p style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+              Live WebSocket feed · Fraud detection · Zone heatmap
+            </p>
+          </div>
+        </div>
 
-        <section className="mx-auto mt-10 grid max-w-6xl gap-4 px-4 md:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-xl font-semibold text-slate-900">Earnings DNA</h3>
-            <p className="mt-2 text-sm text-gray-500">7x24 income fingerprint for smarter protection.</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-xl font-semibold text-slate-900">4-Layer Fraud Engine</h3>
-            <p className="mt-2 text-sm text-gray-500">GPS, behavior, cluster, and enrollment checks.</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-xl font-semibold text-slate-900">Forecast Shield</h3>
-            <p className="mt-2 text-sm text-gray-500">Auto-upgrades coverage before risk spikes.</p>
-          </div>
-        </section>
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
+          {[
+            { icon: '🧬', label: 'Earnings DNA', desc: 'Personal 7×24 income fingerprint' },
+            { icon: '🔄', label: 'Zero-Touch Claims', desc: 'Fully automated claim pipeline' },
+            { icon: '📍', label: 'Live Location', desc: 'GPS + Nominatim zone detection' },
+            { icon: '💬', label: 'Multilingual', desc: 'English · हिंदी · తెలుగు' },
+          ].map((f) => (
+            <div key={f.label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 18px' }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>{f.icon}</div>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{f.label}</div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, lineHeight: 1.4 }}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
 
-        <section className="mx-auto mt-10 max-w-6xl rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
+        {/* Evaluator link */}
+        <div style={{ textAlign: 'center' }}>
           <button
             type="button"
             onClick={goToAdminLogin}
-            className="w-full text-left text-sm font-semibold text-blue-700 transition hover:text-blue-900"
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 12, padding: '12px 28px', color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
           >
             Team / evaluator admin access →
           </button>
-        </section>
+        </div>
       </main>
     </div>
   );

@@ -33,8 +33,8 @@ import { useLocalization } from '../contexts/LocalizationContext';
 
 const TIERS = [
   { id: 'Basic', name: 'Basic', blurb: 'Essential weekly protection', listWeekly: 49, maxWeekly: 600 },
-  { id: 'Standard', name: 'Standard', blurb: 'Balanced coverage for most riders', listWeekly: 89, maxWeekly: 900, popular: true },
-  { id: 'Pro', name: 'Pro', blurb: 'Higher weekly payout cap', listWeekly: 149, maxWeekly: 1200 },
+  { id: 'Standard', name: 'Standard', blurb: 'Balanced coverage for most riders', listWeekly: 79, maxWeekly: 800, popular: true },
+  { id: 'Pro', name: 'Pro', blurb: 'Higher weekly payout cap', listWeekly: 99, maxWeekly: 1100 },
 ];
 
 const PAYMENT_ASSETS = {
@@ -512,8 +512,7 @@ export default function PolicyScreen() {
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.sheetTitle}>{isCovered ? 'Switch plan' : 'Choose your plan'}</Text>
             <Text style={styles.sheetSub}>
-              Pay weekly premium through Razorpay (UPI, cards, netbanking). Your plan activates after payment
-              confirms.
+              Select a plan now. You can change later before payment. Then pay via UPI, card, or netbanking to activate.
             </Text>
             {payMutation.isPending ? (
               <View style={styles.rzpStatusRow}>

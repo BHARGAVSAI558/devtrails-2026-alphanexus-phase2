@@ -17,39 +17,30 @@ const apiBaseURL = useDevProxy ? '/api/v1' : `${BASE_URL}/api/v1`;
 
 const api = axios.create({
   baseURL: apiBaseURL,
-  timeout: 60_000,
+  timeout: 30_000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-/**
- * Safe wrapper for API responses — ensures JSON parsing and null-safe data.
- */
 export function safeJsonResponse<T>(data: unknown, fallback: T): T {
   if (data === null || data === undefined) return fallback;
   if (typeof data === 'object') return data as T;
   return fallback;
 }
 
-/**
- * Safe array access — returns empty array if data is not an array.
- */
 export function safeArray<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
   return [];
 }
 
 let warmupPromise: Promise<void> | null = null;
-/**
- * Best-effort backend wake-up to reduce first-login latency after Render idle.
- * Non-blocking; safe to call multiple times.
- */
+
 export function warmBackendOnce(): Promise<void> {
   if (warmupPromise) return warmupPromise;
   warmupPromise = (async () => {
     try {
-      await axios.get(`${BASE_URL}/health`, { timeout: 8_000 });
+      await axios.get(`${BASE_URL}/health`, { timeout: 15_000 }); // warmup only
     } catch {
-      // ignore warmup failures; real requests still handle errors/retries
+      // ignore warmup failures
     }
   })();
   return warmupPromise;
@@ -64,20 +55,37 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Redirect to login on 401 (but not failed admin password — that must show "Invalid" on the form)
+// Response interceptor: retry once on transient errors, redirect on 401
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    if (err.response?.status === 401) {
-      const reqUrl = String(err.config?.url ?? '');
-      if (reqUrl.includes('/auth/admin-login')) {
-        return Promise.reject(err);
-      }
-      useAuthStore.getState().signOut();
-      if (!window.location.pathname.endsWith('/login')) {
-        window.location.href = '/login';
+    const reqUrl = String(err.config?.url ?? '');
+    const status = err.response?.status as number | undefined;
+
+    // Never retry client errors
+    const noRetry = [400, 401, 403, 404, 422].includes(status as number);
+    const isTransient =
+      err.code === 'ECONNABORTED' ||
+      err.code === 'ERR_NETWORK' ||
+      String(err.message || '').toLowerCase().includes('timeout') ||
+      String(err.message || '').toLowerCase().includes('network') ||
+      [502, 503, 504].includes(status as number);
+
+    if (isTransient && !noRetry && !err.config?._retried) {
+      err.config._retried = true;
+      try {
+        return await axios({ ...err.config, timeout: 30_000 });
+      } catch (_) {
+        // fall through to normal error handling
       }
     }
+
+    if (status === 401) {
+      if (reqUrl.includes('/auth/admin-login')) return Promise.reject(err);
+      useAuthStore.getState().signOut();
+      if (!window.location.pathname.endsWith('/login')) window.location.href = '/login';
+    }
+
     return Promise.reject(err);
   }
 );
