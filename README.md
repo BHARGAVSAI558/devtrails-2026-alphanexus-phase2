@@ -40,14 +40,9 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 ## 📱 Scan to Open on Your Phone
 
 <div align="center">
-
-![SafeNet Worker App QR](assets/qr.png)
-
-**Install [Expo Go](https://expo.dev/go) → Scan → Full native experience in seconds**
-
-*Or paste directly into Expo Go:*
-`exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/278ac272-c5ef-40dc-beb2-25d1c58cae8e`
-
+  <img src="safenet_v2/admin/public/worker-app-qr.png" width="260" alt="SafeNet QR" />
+  <br/>
+  Scan to open SafeNet Worker App
 </div>
 
 ---
