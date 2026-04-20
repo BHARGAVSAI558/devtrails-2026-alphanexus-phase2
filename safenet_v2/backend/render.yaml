@@ -7,12 +7,20 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
     envVars:
+      - key: APP_ENV
+        value: "production"
       - key: DEMO_MODE
+        value: "false"
+      - key: DB_FAIL_FAST
         value: "true"
+      - key: DB_STARTUP_MAX_RETRIES
+        value: "8"
+      - key: DB_STARTUP_RETRY_BASE_SECONDS
+        value: "1.0"
       - key: JWT_SECRET
-        value: safenet-prod-2026-alphaNexus
+        value: ""
       - key: ADMIN_JWT_SECRET
-        value: admin-safenet-2026
+        value: ""
       - key: ALLOWED_ORIGINS
         value: "https://safenet-sage.vercel.app,https://safenet-admin-wine.vercel.app,http://localhost:3000,http://localhost:5173,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8081"
       - key: OPENWEATHER_API_KEY

@@ -52,8 +52,12 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "SafeNet"
     APP_VERSION: str = "1.0.0"
+    APP_ENV: str = "development"  # set to "production" on Render
     DEBUG: bool = False
     DEMO_MODE: bool = False
+    DB_FAIL_FAST: bool = True
+    DB_STARTUP_MAX_RETRIES: int = 8
+    DB_STARTUP_RETRY_BASE_SECONDS: float = 1.0
 
     # Comma-separated browser Origins (scheme+host+port, no path). Parsed with trim, slash strip, dedupe.
     # Defaults include live Vercel frontends so a missing Render env var does not block production CORS.
@@ -126,7 +130,7 @@ class Settings(BaseSettings):
     GOVERNMENT_ALERTS_SEED_PATH: str = ""
     ADMIN_API_KEY: str = Field(default="", validation_alias=AliasChoices("ADMIN_API_KEY", "ADMIN_KEY"))
 
-    @field_validator("DEBUG", "DEMO_MODE", mode="before")
+    @field_validator("DEBUG", "DEMO_MODE", "DB_FAIL_FAST", mode="before")
     @classmethod
     def _parse_boolish(cls, value: object) -> bool:
         if isinstance(value, bool):
@@ -137,6 +141,17 @@ class Settings(BaseSettings):
         if raw in {"0", "false", "no", "off", "release", "prod", "production", ""}:
             return False
         return bool(value)
+
+    @computed_field
+    @property
+    def has_database_url(self) -> bool:
+        u = (os.getenv("DATABASE_URL") or "").strip() or (self.DATABASE_URL or "").strip()
+        return bool(u)
+
+    @computed_field
+    @property
+    def is_production(self) -> bool:
+        return (self.APP_ENV or "").strip().lower() in {"prod", "production", "render"}
 
     @computed_field
     @property

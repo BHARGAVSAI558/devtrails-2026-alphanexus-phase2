@@ -25,6 +25,7 @@ from app.services.event_service import load_government_alerts_from_path
 from app.core.middleware import MaxBodySizeMiddleware, RequestIDMiddleware, RequestTimingMiddleware, RateLimitMiddleware
 from app.core.rate_limit import limiter
 from app.db.session import AsyncSessionLocal, engine, init_db, sqlite_uses_memory_fallback
+from app.db.db_url import db_target_fingerprint
 from app.models.zone import Zone
 from app.tasks.background_scheduler import shutdown_background_scheduler, start_background_scheduler
 from app.utils.logger import logger
@@ -34,15 +35,58 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
 def _run_alembic_upgrade_sync() -> None:
     try:
-        subprocess.run(
+        proc = subprocess.run(
             [sys.executable, "-m", "alembic", "upgrade", "head"],
             cwd=str(BACKEND_ROOT),
             check=False,
             capture_output=True,
             text=True,
         )
+        if proc.returncode != 0:
+            logger.warning(
+                "alembic_upgrade_failed",
+                engine_name="main",
+                decision="failed",
+                reason_code="ALEMBIC_UPGRADE",
+                returncode=proc.returncode,
+                stdout=(proc.stdout or "")[-2000:],
+                stderr=(proc.stderr or "")[-2000:],
+            )
+            raise RuntimeError(f"Alembic upgrade failed with code {proc.returncode}")
+        logger.info("alembic_upgrade_ok", engine_name="main", decision="ok", reason_code="ALEMBIC_UPGRADE")
     except Exception as exc:
         logger.warning("alembic_upgrade_skipped: %s", exc)
+
+
+async def _wait_for_db_ready() -> None:
+    """
+    Retry loop for hosted Postgres (Supabase/Render). We fail fast when DATABASE_URL is set,
+    so the service doesn't half-start and then 500 on auth endpoints.
+    """
+    fp = db_target_fingerprint(settings.async_database_url)
+    attempts = max(1, int(settings.DB_STARTUP_MAX_RETRIES or 1))
+    base = float(settings.DB_STARTUP_RETRY_BASE_SECONDS or 1.0)
+    last_exc: Exception | None = None
+    for i in range(1, attempts + 1):
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            logger.info("startup_db_ping_ok", engine_name="main", decision="ok", attempt=i, **fp)
+            return
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            logger.warning(
+                "startup_db_ping_failed",
+                engine_name="main",
+                decision="retry",
+                attempt=i,
+                max_attempts=attempts,
+                error=str(exc),
+                **fp,
+            )
+            if i < attempts:
+                await asyncio.sleep(min(30.0, base * (2 ** (i - 1))))
+    raise RuntimeError(f"Database not reachable after {attempts} attempts: {last_exc}")
 
 
 async def _post_init_zones_and_log() -> None:
@@ -71,8 +115,14 @@ async def lifespan(app: FastAPI):
     try:
         import os
 
-        if (os.getenv("DATABASE_URL") or "").strip():
+        db_url_present = bool((os.getenv("DATABASE_URL") or "").strip() or (settings.DATABASE_URL or "").strip())
+
+        if settings.is_production and db_url_present and settings.is_sqlite:
+            raise RuntimeError("DATABASE_URL is set but resolved to sqlite — refusing to start in production.")
+
+        if db_url_present and not settings.is_sqlite:
             await asyncio.to_thread(_run_alembic_upgrade_sync)
+            await _wait_for_db_ready()
 
         await init_db()
         logger.info("Database initialized")
@@ -85,14 +135,17 @@ async def lifespan(app: FastAPI):
             version=settings.APP_VERSION,
         )
     except Exception as exc:
-        logger.warning(f"DB init warning (continuing): {exc}")
+        logger.warning(f"DB init warning: {exc}")
         logger.warning(
             "startup_db_warning",
             engine_name="main",
-            decision="degraded",
+            decision="failed",
             reason_code="DB_INIT_FAILED",
             error=str(exc),
         )
+        # In production (DATABASE_URL set), fail fast so browsers don't see random 500s.
+        if settings.is_production and settings.has_database_url and settings.DB_FAIL_FAST:
+            raise
 
     try:
         if settings.REDIS_URL:

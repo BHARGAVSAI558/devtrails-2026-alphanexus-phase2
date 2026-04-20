@@ -1,10 +1,8 @@
 import asyncio
-import ssl
 import sqlite3
 from pathlib import Path
 from collections.abc import AsyncGenerator
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 from fastapi import HTTPException
 from sqlalchemy import text
@@ -13,41 +11,9 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 from app.db.base import Base
+from app.db.db_url import prepare_asyncpg_engine_kwargs
 
 SQLITE_MEMORY_FALLBACK = False
-
-def prepare_asyncpg_engine_kwargs(database_url: str) -> tuple[str, dict[str, Any]]:
-    """
-    Normalize DATABASE_URL for SQLAlchemy + asyncpg: remove sslmode (and similar) from the query string
-    and map TLS intent to connect_args['ssl'] (bool or ssl.SSLContext). SQLite URLs are returned unchanged.
-    """
-    url = (database_url or "").strip()
-    if not url or url.startswith("sqlite"):
-        return url, {}
-
-    split = urlsplit(url)
-    host = (split.hostname or "").lower()
-
-    qs = parse_qs(split.query, keep_blank_values=False)
-    sslmode_vals = qs.pop("sslmode", None)
-    qs.pop("channel_binding", None)
-
-    connect_args: dict[str, Any] = {}
-    if sslmode_vals:
-        mode = (sslmode_vals[0] or "").strip().lower()
-        if mode in ("require", "verify-ca", "verify-full", "prefer"):
-            connect_args["ssl"] = ssl.create_default_context()
-        elif mode in ("allow",):
-            connect_args["ssl"] = True
-        elif mode == "disable":
-            connect_args["ssl"] = False
-    elif "supabase.co" in host or "pooler.supabase.com" in host:
-        connect_args["ssl"] = ssl.create_default_context()
-
-    new_query = urlencode(qs, doseq=True)
-    cleaned = urlunsplit((split.scheme, split.netloc, split.path, new_query, split.fragment))
-    return cleaned, connect_args
-
 
 def _sqlite_database_url_and_connect_args(database_url: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
     global SQLITE_MEMORY_FALLBACK

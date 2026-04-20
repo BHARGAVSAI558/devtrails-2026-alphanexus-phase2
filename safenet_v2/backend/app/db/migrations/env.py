@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings
 from app.db.base import Base
-from app.db.session import prepare_asyncpg_engine_kwargs
+from app.db.db_url import prepare_asyncpg_engine_kwargs
 from app.models import (  # noqa: F401
     FraudSignal,
     Log,
