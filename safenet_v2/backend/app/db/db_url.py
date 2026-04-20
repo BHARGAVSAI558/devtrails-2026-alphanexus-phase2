@@ -8,14 +8,14 @@ from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 def is_db_ssl_insecure_enabled() -> bool:
     """
-    DB_SSL_INSECURE=1/true/TRUE/yes enables insecure TLS (no hostname check, no cert verification).
+    DB_SSL_INSECURE=1/true/yes/on enables insecure TLS (no hostname check, no cert verification).
     Reads from os.getenv() only.
     """
     raw = os.getenv("DB_SSL_INSECURE")
     if raw is None:
         return False
-    val = str(raw).strip()
-    return val in {"1", "true", "TRUE", "yes"}
+    val = str(raw).strip().lower()
+    return val in {"1", "true", "yes", "on"}
 
 
 def _masked_host(host: str | None) -> str:

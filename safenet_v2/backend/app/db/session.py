@@ -89,6 +89,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         except asyncio.TimeoutError:
             await session.close()
             raise HTTPException(status_code=503, detail="Our system is busy right now. Please try again.")
+        except Exception:
+            await session.close()
+            # Ensure browser clients get a clean JSON 503 (and CORS headers still apply).
+            raise HTTPException(status_code=503, detail="Database unavailable. Please try again shortly.")
     try:
         try:
             yield session
