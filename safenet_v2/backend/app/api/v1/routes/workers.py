@@ -236,7 +236,7 @@ async def _default_worker_profile_out(current_user: User, db: AsyncSession) -> W
         occupation="delivery",
         avg_daily_income=650.0,
         risk_profile="medium",
-        trust_score=50.0,
+        trust_score=100.0,
         total_claims=0,
         total_payouts=0.0,
         platform=None,

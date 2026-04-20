@@ -67,6 +67,31 @@ def _load_zone_coords() -> dict[str, dict[str, Any]]:
 ZONE_COORDS = _load_zone_coords()
 
 
+@router.get("/geo/reverse")
+async def reverse_geocode(latitude: float, longitude: float) -> dict[str, Any]:
+    """
+    Browser-safe reverse geocoding proxy (Open-Meteo) to avoid client-side CORS blocks.
+    Returns: { placeName, cityName } (best-effort; empty strings on failure).
+    """
+    lat = float(latitude)
+    lon = float(longitude)
+    url = "https://geocoding-api.open-meteo.com/v1/reverse"
+    params = {"latitude": lat, "longitude": lon, "language": "en"}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url, params=params)
+        if resp.status_code != 200:
+            return {"placeName": "", "cityName": ""}
+        data = resp.json()
+        r = (data or {}).get("results") or []
+        first = r[0] if isinstance(r, list) and r else {}
+        place = first.get("name") or first.get("admin4") or first.get("admin3") or ""
+        city = first.get("admin2") or first.get("admin1") or first.get("name") or ""
+        return {"placeName": str(place or ""), "cityName": str(city or "")}
+    except Exception:
+        return {"placeName": "", "cityName": ""}
+
+
 def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
 

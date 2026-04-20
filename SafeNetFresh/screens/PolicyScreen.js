@@ -585,7 +585,7 @@ export default function PolicyScreen() {
                 <Image source={PAYMENT_ASSETS.gpay} style={styles.brandIcon} />
               </View>
               <View style={[styles.brandPill, { backgroundColor: '#dbeafe' }]}>
-                <Image source={PAYMENT_ASSETS.gpay} style={styles.brandIcon} />
+                <Image source={PAYMENT_ASSETS.qr} style={styles.brandIcon} />
               </View>
               <View style={[styles.brandPill, { backgroundColor: '#fee2e2' }]}>
                 <Image source={PAYMENT_ASSETS.card} style={styles.brandIcon} />

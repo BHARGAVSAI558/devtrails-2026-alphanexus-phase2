@@ -7,12 +7,20 @@ import { formatShortLocation } from '../utils/locationDisplay';
 /** Open-Meteo reverse lookup — works on web where Expo Geocoding was removed (SDK 49+). */
 async function reverseGeocodeOpenMeteo(latitude, longitude) {
   try {
-    const u = `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(
+    // Use backend proxy to avoid browser CORS blocks on Open-Meteo.
+    const proxy = zones.reverseGeocodeURL?.(latitude, longitude);
+    const u = proxy || `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(
       String(latitude)
     )}&longitude=${encodeURIComponent(String(longitude))}&language=en`;
     const res = await fetch(u);
     if (!res.ok) return { placeName: null, cityName: null };
     const data = await res.json();
+    // Proxy shape differs slightly from Open-Meteo.
+    if (data && typeof data === 'object' && ('placeName' in data || 'cityName' in data)) {
+      const placeName = data.placeName || null;
+      const cityName = data.cityName || null;
+      return { placeName, cityName };
+    }
     const r = data?.results?.[0];
     if (!r) return { placeName: null, cityName: null };
     const placeName = r.name || r.admin4 || r.admin3 || null;

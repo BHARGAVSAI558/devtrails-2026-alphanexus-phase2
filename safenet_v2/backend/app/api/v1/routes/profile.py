@@ -104,7 +104,7 @@ async def upsert_gig_profile(
             coverage_tier=tier,
             risk_score=float(risk_score),
             weekly_premium=float(weekly),
-            trust_score=0.0,
+            trust_score=100.0,
             location_display=loc_disp,
         )
         db.add(row)

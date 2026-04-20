@@ -1636,7 +1636,7 @@ export default function DashboardScreen({ navigation }) {
             <Text style={[styles.dnaInsightLine, { color: colors.text }]}>
               {isColdProfile
                 ? t('dashboard.protection_cold_hint')
-                : `₹${Math.round(protectedThisWeek).toLocaleString('en-IN')} of ₹${Math.round(protectedMax).toLocaleString('en-IN')} used`}
+                : `This week you got ₹${Math.round(protectedThisWeek).toLocaleString('en-IN')}`}
             </Text>
             <View style={[styles.dnaProgressTrack, { backgroundColor: colors.border }]}>
               <View
@@ -1667,18 +1667,12 @@ export default function DashboardScreen({ navigation }) {
           <View style={{ flex: 1, paddingRight: 8 }}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('dashboard.weekly_protection')}</Text>
             <Text style={[styles.coverageRingAmount, { color: colors.text }]}>
-              ₹{Math.round(shownWeeklyProtected).toLocaleString('en-IN')} of ₹
-              {Math.round(protectedMax).toLocaleString('en-IN')} used
+              This week you got ₹{Math.round(shownWeeklyProtected).toLocaleString('en-IN')}
             </Text>
             <Text style={[styles.fingerprintHint, { color: colors.muted }]}>
               {isColdProfile && Math.round(shownWeeklyProtected) === 0
                 ? t('dashboard.protection_cold_hint')
-                : weeklyProtectionPct != null
-                  ? `${weeklyProtectionPct}% of weekly cap`
-                  : `${trend.dir === 'up' ? '↗' : trend.dir === 'down' ? '↘' : '→'} ${trend.pct}% vs typical week`}
-            </Text>
-            <Text style={[styles.cardSub, { color: colors.muted, marginTop: 6 }]}>
-              Weekly cap ₹{Math.round(protectedMax).toLocaleString('en-IN')}
+                : `${trend.dir === 'up' ? '↗' : trend.dir === 'down' ? '↘' : '→'} ${trend.pct}% vs typical week`}
             </Text>
             <TouchableOpacity onPress={() => setCoverageExpanded((x) => !x)} style={{ marginTop: 10 }}>
               <Text style={[styles.linkText, { color: colors.primary }]}>
@@ -1687,7 +1681,7 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={styles.coverageRingWrap}>
-            <ProgressRing value={shownWeeklyProtected} max={protectedMax} size={104} stroke={10} scheme={scheme} />
+            <ProgressRing value={shownWeeklyProtected} max={Math.max(1, shownWeeklyProtected)} size={104} stroke={10} scheme={scheme} />
           </View>
         </View>
         {coverageExpanded ? (

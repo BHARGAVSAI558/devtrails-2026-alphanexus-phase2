@@ -292,6 +292,8 @@ export const zones = {
     unwrap(await api.get(`/zones/${encodeURIComponent(zoneId)}/forecast-daily`)),
   detectFromGPS: async (lat, lng) =>
     unwrap(await api.get('/zones/detect', { params: { lat, lng } })),
+  reverseGeocodeURL: (lat, lng) =>
+    `${BACKEND_URL}/api/v1/geo/reverse?latitude=${encodeURIComponent(String(lat))}&longitude=${encodeURIComponent(String(lng))}`,
   getActiveDisruptions: async (zoneId) =>
     unwrap(await api.get(`/zones/${encodeURIComponent(zoneId)}/disruptions/active`)),
   getRiskMode: async (zoneId) =>
