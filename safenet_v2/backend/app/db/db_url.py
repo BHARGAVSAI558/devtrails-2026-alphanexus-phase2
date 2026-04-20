@@ -83,3 +83,23 @@ def prepare_asyncpg_engine_kwargs(database_url: str) -> Tuple[str, dict[str, Any
     cleaned = urlunsplit((split.scheme, split.netloc, split.path, new_query, split.fragment))
     return cleaned, connect_args
 
+
+def db_ssl_mode_label(database_url: str) -> str:
+    """
+    Returns one of: 'secure' | 'insecure' | 'disabled' | 'none'
+    """
+    url = (database_url or "").strip()
+    if not url or url.startswith("sqlite"):
+        return "none"
+    _, connect_args = prepare_asyncpg_engine_kwargs(url)
+    ssl_arg = connect_args.get("ssl", None)
+    if ssl_arg is False:
+        return "disabled"
+    if isinstance(ssl_arg, ssl.SSLContext):
+        insecure = ssl_arg.verify_mode == ssl.CERT_NONE or (ssl_arg.check_hostname is False)
+        return "insecure" if insecure else "secure"
+    if ssl_arg is True:
+        # asyncpg will create SSL context internally; cannot guarantee verify mode here.
+        return "secure"
+    return "none"
+

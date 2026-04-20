@@ -25,7 +25,7 @@ from app.services.event_service import load_government_alerts_from_path
 from app.core.middleware import MaxBodySizeMiddleware, RequestIDMiddleware, RequestTimingMiddleware, RateLimitMiddleware
 from app.core.rate_limit import limiter
 from app.db.session import AsyncSessionLocal, engine, init_db, sqlite_uses_memory_fallback
-from app.db.db_url import db_target_fingerprint
+from app.db.db_url import db_ssl_mode_label, db_target_fingerprint
 from app.models.zone import Zone
 from app.tasks.background_scheduler import shutdown_background_scheduler, start_background_scheduler
 from app.utils.logger import logger
@@ -64,6 +64,7 @@ async def _wait_for_db_ready() -> None:
     so the service doesn't half-start and then 500 on auth endpoints.
     """
     fp = db_target_fingerprint(settings.async_database_url)
+    ssl_mode = db_ssl_mode_label(settings.async_database_url)
     attempts = max(1, int(settings.DB_STARTUP_MAX_RETRIES or 1))
     base = float(settings.DB_STARTUP_RETRY_BASE_SECONDS or 1.0)
     last_exc: Exception | None = None
@@ -71,7 +72,7 @@ async def _wait_for_db_ready() -> None:
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
-            logger.info("startup_db_ping_ok", engine_name="main", decision="ok", attempt=i, **fp)
+            logger.info("startup_db_ping_ok", engine_name="main", decision="ok", attempt=i, db_ssl_mode=ssl_mode, **fp)
             return
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
@@ -82,6 +83,7 @@ async def _wait_for_db_ready() -> None:
                 attempt=i,
                 max_attempts=attempts,
                 error=str(exc),
+                db_ssl_mode=ssl_mode,
                 **fp,
             )
             if i < attempts:
@@ -116,6 +118,15 @@ async def lifespan(app: FastAPI):
         import os
 
         db_url_present = bool((os.getenv("DATABASE_URL") or "").strip() or (settings.DATABASE_URL or "").strip())
+
+        if db_url_present and not settings.is_sqlite:
+            logger.info(
+                "startup_db_ssl_mode",
+                engine_name="main",
+                decision=db_ssl_mode_label(settings.async_database_url),
+                reason_code="DB_SSL_MODE",
+                **db_target_fingerprint(settings.async_database_url),
+            )
 
         if settings.is_production and db_url_present and settings.is_sqlite:
             raise RuntimeError("DATABASE_URL is set but resolved to sqlite — refusing to start in production.")
