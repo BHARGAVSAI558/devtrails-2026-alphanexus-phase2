@@ -31,7 +31,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 | 🖥️ **Admin Dashboard** | **[safenet-admin-wine.vercel.app/admin-login](https://safenet-admin-wine.vercel.app/admin-login)** — `admin` / `admin123` |
 | 🔗 **Unified Entry + QR** | [safenet-admin-wine.vercel.app/login](https://safenet-admin-wine.vercel.app/login) |
 | ❤️ **Health Check** | [safenet-api-y4se.onrender.com/health](https://safenet-api-y4se.onrender.com/health) |
-| 📊 **Pitch Deck** | [View on Google Slides](https://drive.google.com/file/d/1Hm4Dmb8lZwc0y5OuCcxt7tXnf_2cSYyC/view?usp=sharing) |
+| 📊 **Pitch Deck** | [View Pitch Deck](https://drive.google.com/file/d/1Hm4Dmb8lZwc0y5OuCcxt7tXnf_2cSYyC/view?usp=sharing) |
 
 
 ---
