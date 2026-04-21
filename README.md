@@ -31,8 +31,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 | 🖥️ **Admin Dashboard** | **[safenet-admin-wine.vercel.app/admin-login](https://safenet-admin-wine.vercel.app/admin-login)** — `admin` / `admin123` |
 | 🔗 **Unified Entry + QR** | [safenet-admin-wine.vercel.app/login](https://safenet-admin-wine.vercel.app/login) |
 | ❤️ **Health Check** | [safenet-api-y4se.onrender.com/health](https://safenet-api-y4se.onrender.com/health) |
-| 💻 **Source Code** | [github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2) |
-| 📊 **Pitch Deck** | [View on Google Slides](https://docs.google.com/presentation/d/1LhPPk7UFxfjY6dbjz6kf0PqrQdqvn945/edit?usp=sharing&ouid=116368085396987359147&rtpof=true&sd=true) |
+| 📊 **Pitch Deck** | [View on Google Slides](https://drive.google.com/file/d/1Hm4Dmb8lZwc0y5OuCcxt7tXnf_2cSYyC/view?usp=sharing) |
 
 
 ---
@@ -42,7 +41,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 <div align="center">
   <img src="safenet_v2/admin/public/worker-app-qr.png" width="260" alt="SafeNet QR" />
   <br/>
-  Scan to open SafeNet Worker App
+  Scan to open SafeNet Worker App(Expo)
 </div>
 
 ---
