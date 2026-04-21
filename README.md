@@ -27,7 +27,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 
 | | Link |
 |--|--|
-| 📱 **Worker App** *(Start here — Highly Recommended)* | **[safenet-sage.vercel.app](https://safenet-sage.vercel.app)** |
+| 📱 **Worker App**  | **[safenet-sage.vercel.app](https://safenet-sage.vercel.app)** |
 | 🖥️ **Admin Dashboard** | **[safenet-admin-wine.vercel.app/admin-login](https://safenet-admin-wine.vercel.app/admin-login)** — `admin` / `admin123` |
 | 🔗 **Unified Entry + QR** | [safenet-admin-wine.vercel.app/login](https://safenet-admin-wine.vercel.app/login) |
 | ❤️ **Health Check** | [safenet-api-y4se.onrender.com/health](https://safenet-api-y4se.onrender.com/health) |
@@ -37,7 +37,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 
 ---
 
-## 📱 Scan to Open on Your Phone
+## 📱 Scan to Open on Your Phone **(Highly recommended)**
 
 <div align="center">
   <img src="safenet_v2/admin/public/worker-app-qr.png" width="260" alt="SafeNet QR" />
