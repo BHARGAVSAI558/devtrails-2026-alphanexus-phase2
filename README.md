@@ -33,7 +33,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 | ❤️ **Health Check** | [safenet-api-y4se.onrender.com/health](https://safenet-api-y4se.onrender.com/health) |
 | 💻 **Source Code** | [github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2](https://github.com/BHARGAVSAI558/devtrails-2026-alphanexus-phase2) |
 | 📊 **Pitch Deck** | [View on Google Slides](https://docs.google.com/presentation/d/1LhPPk7UFxfjY6dbjz6kf0PqrQdqvn945/edit?usp=sharing&ouid=116368085396987359147&rtpof=true&sd=true) |
-| 🎬 **Demo Video** | *(add before final submission)* |
+
 
 ---
 
