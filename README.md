@@ -453,7 +453,6 @@ devtrails-2026-alphanexus-phase2/
 | DBSCAN zero-day detector | ✅ Real — runs every 60 seconds |
 | WebSockets (worker + admin) | ✅ Real bidirectional push |
 | Earnings DNA | ✅ Real — from history + zone baselines |
-| PDF claim receipts | ✅ Real — fpdf2, full audit trail |
 | Multilingual (EN/HI/TE) | ✅ Built-in — no external API |
 | Trust score + device fingerprint | ✅ Real — persisted in PostgreSQL |
 | Premium collection | 🔶 Razorpay test mode |
