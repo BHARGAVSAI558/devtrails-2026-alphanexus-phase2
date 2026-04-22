@@ -110,11 +110,13 @@ export default function Login() {
             { icon: '🧬', label: 'Earnings DNA', desc: 'Personal 7×24 income fingerprint' },
             { icon: '🔄', label: 'Zero-Touch Claims', desc: 'Fully automated claim pipeline' },
             { icon: '📍', label: 'Live Location', desc: 'GPS + Nominatim zone detection' },
-            { icon: '💬', label: 'Multilingual', desc: 'English · हिंदी · తెలుగు' },
-      {icon:'🤖',label:'AI Risk Priority for Queries',desc:'AI to prioritize critical issues'},
+            { icon: '💬', label: 'Multilingual+Voice to text', desc: 'English · हिंदी · తెలుగు' },
+      {icon:'🤖',label:'AI Risk Priority for Queries',desc:'AI to prioritize critical issues first'},
       {icon:'📡🛢️',label:'DBSCAN',desc:'DBSCAN Zero-Day Detection'},
       {icon:'📍🔍',label:'Micro-Location Intelligence',desc:'operate at a granular'},
-      
+      {icon :'🛡️',label:'Forecast shield',desc:'Predicts disruptions in advance'},
+      {icon:'🚨⚖️',label:'Fraud & Risk Control',desc:' Multi-layered fraud detection'},
+      {icon:'⭐',label:'Trust Score',desc:'Individual trust score on user behaviour'},
           ].map((f) => (
             <div key={f.label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 18px' }}>
               <div style={{ fontSize: 28, marginBottom: 10 }}>{f.icon}</div>
