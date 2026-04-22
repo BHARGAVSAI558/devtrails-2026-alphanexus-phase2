@@ -5,7 +5,7 @@ export default function Login() {
   const navigate = useNavigate();
   const workerAppUrl = 'https://safenet-sage.vercel.app';
   const expoDeepLink =
-    'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/278ac272-c5ef-40dc-beb2-25d1c58cae8e';
+    'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/b9f6630e-f94b-4e51-a1e9-c814b0e08e45';
 
   const goToAdminLogin = () => {
     navigate('/admin-login', { state: { username: 'admin', password: 'admin123' } });
@@ -20,7 +20,7 @@ export default function Login() {
           <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>SafeNet</span>
         </div>
         <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.75)', maxWidth: 520, margin: '0 auto 24px', lineHeight: 1.6 }}>
-          AI-powered income protection for India's 15M+ gig delivery workers
+          AI-powered income protection for India's Millions of gig delivery workers
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
           {['🔴 Live Backend', '⚡ Real-time WebSockets', '🤖 ML-Powered', '🛡️ Zero-Touch Claims'].map((tag) => (
@@ -111,11 +111,15 @@ export default function Login() {
             { icon: '🔄', label: 'Zero-Touch Claims', desc: 'Fully automated claim pipeline' },
             { icon: '📍', label: 'Live Location', desc: 'GPS + Nominatim zone detection' },
             { icon: '💬', label: 'Multilingual', desc: 'English · हिंदी · తెలుగు' },
+      {icon:'🤖',label:'AI Risk Priority for Queries',desc:'AI to prioritize critical issues'},
+      {icon:'📡🛢️',label:'DBSCAN',desc:'DBSCAN Zero-Day Detection'},
+      {icon:'📍🔍',label:'Micro-Location Intelligence',desc:'operate at a granular'},
+      
           ].map((f) => (
             <div key={f.label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 18px' }}>
               <div style={{ fontSize: 28, marginBottom: 10 }}>{f.icon}</div>
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{f.label}</div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, lineHeight: 1.4 }}>{f.desc}</div>
+              <div style={{ color: '#fff', fontWeight: 600, fontSize: 13, marginBottom: 3 }}>{f.label}</div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, lineHeight: 1.3 }}>{f.desc}</div>
             </div>
           ))}
         </div>
