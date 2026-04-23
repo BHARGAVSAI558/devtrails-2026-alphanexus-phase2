@@ -5,7 +5,7 @@ export default function Login() {
   const navigate = useNavigate();
   const workerAppUrl = 'https://safenet-sage.vercel.app';
   const expoDeepLink =
-    'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/b9f6630e-f94b-4e51-a1e9-c814b0e08e45';
+    'exp://u.expo.dev/2d45889e-9415-4966-be7f-ba2711a57f13/group/33738d50-41eb-4eda-b2e9-828c27eb879b';
 
   const goToAdminLogin = () => {
     navigate('/admin-login', { state: { username: 'admin', password: 'admin123' } });
