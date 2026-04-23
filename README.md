@@ -4,7 +4,7 @@
 
 ### *"SafeNet doesn't ask you to prove anything. It proves it for you."*
 
-**AI-powered parametric income protection for India's 15 million gig delivery workers.**
+**AI-powered parametric income protection for India's millions of gig delivery workers.**
 
 When rain, floods, heat, or shutdowns erase a day's earnings —
 SafeNet detects it, validates it, and pays exactly what was lost.
@@ -22,7 +22,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 
 ## 🚀 Live — Try It Right Now
 
-> **Backend on Render free tier.** First request may take 10–15 seconds to wake up.
+> **Backend on Render free tier.** First request may take 20-30 seconds to wake up.
 > Both apps show *"Starting server… please wait"* during cold start — never a raw error.
 
 | | Link |
@@ -48,9 +48,9 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 
 ## 💡 Why This Matters
 
-India has millions of platform delivery workers** — Zomato, Swiggy, Zepto, Blinkit, Amazon. They earn per trip. Not per month. Not per hour. Per trip.
+India has millions of platform delivery workers — Zomato, Swiggy, Zepto, Blinkit, Amazon. They earn per trip. Not per month. Not per hour. Per trip.
 
-**Ravi, 26, Hyderabad.** Thursday evening. Dinner rush. ₹58 an hour — his best window of the week. A flood alert fires at 8 PM. Roads underwater. Platform paused. Zero orders. Three hours of peak income. ₹174. Gone.
+**Swamy, 34, Vijayawada.** Thursday evening. Dinner rush. ₹58 an hour — his best window of the week. A flood alert fires at 8 PM. Roads underwater. Platform paused. Zero orders. Three hours of peak income. ₹174. Gone.
 
 No form to fill. No number to call. No system that catches him.
 
@@ -64,7 +64,7 @@ He borrows money from a friend until Sunday. This happens four times every monso
 | Curfews / local strikes | Zone locked. No pickups or deliveries possible. |
 | Platform outages | Orders stop. Worker is ready. Platform isn't. |
 
-Traditional insurance covers accidents — not lost daily wages. Government schemes explicitly exclude informal gig workers. Every existing product either demands proof Ravi cannot provide, or pays a flat ₹300 disconnected from what he actually lost.
+Traditional insurance covers accidents — not lost daily wages. Government schemes explicitly exclude informal gig workers. Every existing product either demands proof Swamy cannot provide, or pays a flat ₹300 disconnected from what he actually lost.
 
 **The gap in one sentence:** no system today answers *what a specific worker lost at a specific time* — and proves it without asking them to prove it.
 
@@ -165,7 +165,7 @@ Returning users skip onboarding entirely. OTP → dashboard. Done in under 10 se
 Every worker builds a **7×24 earning matrix** from their own delivery history — expected hourly rate for every day-of-week and hour combination. Zone baseline rates apply for new workers until personal history accumulates. The DNA grows more precise with every data point.
 
 ```
-Ravi — Zomato / Hyderabad / Banjara Hills
+Swamy — Zomato / Hyderabad / Banjara Hills
 ─────────────────────────────────────────
            6AM  8AM  10AM  12PM  2PM  4PM  6PM  8PM  10PM
 Monday   [  ░    ▒    ▒     ▓    ▓    ▒    ▒    ▓    ▒  ]
@@ -175,7 +175,7 @@ Sunday   [  ░    ▒    ▓     █    █    ▒    ▒    ▓    ░  ]  ←
 ░ low   ▒ moderate   ▓ active   █ peak
 ```
 
-Flood hits at 8 PM Thursday → `₹58/hr × 3.0h × 0.8 = ₹139`. Not ₹500 for everyone. The exact amount Ravi lost.
+Flood hits at 8 PM Thursday → `₹58/hr × 3.0h × 0.8 = ₹139`. Not ₹500 for everyone. The exact amount Swamy lost.
 
 ---
 
