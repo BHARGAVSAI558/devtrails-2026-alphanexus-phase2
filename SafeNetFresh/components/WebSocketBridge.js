@@ -85,9 +85,11 @@ export default function WebSocketBridge() {
 
     const sub = AppState.addEventListener('change', handleAppStateChange);
 
-    connect();
+    // Delay first WS connect by 2s so Render backend is ready after cold start
+    const connectTimer = setTimeout(() => { connect(); }, 2000);
 
     return () => {
+      clearTimeout(connectTimer);
       disconnect();
       sub.remove();
     };

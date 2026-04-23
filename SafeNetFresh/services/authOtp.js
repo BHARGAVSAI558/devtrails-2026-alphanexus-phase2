@@ -1,8 +1,13 @@
 /**
  * authOtp.js — SafeNet OTP Service
- * Web: Firebase Phone Auth
- * Native: Backend Twilio SMS
- * Fallback: Demo mode after retry (6-8s total delay so judges see real attempt first)
+ *
+ * Web:    Firebase Phone Auth (requires domain in Firebase Console authorized list)
+ *         If Firebase fails → falls back to Twilio backend (same as native)
+ * Native: Backend Twilio SMS directly
+ * Fallback: Demo mode ONLY if both Firebase AND Twilio fail
+ *
+ * Key fix: web no longer falls to random demo code when Firebase fails.
+ * It falls to Twilio backend instead, so DEMO_MODE=false still works.
  */
 
 import { Platform } from 'react-native';
@@ -13,8 +18,7 @@ import { BACKEND_URL } from './api';
 
 const RECAPTCHA_CONTAINER_ID = 'safenet-recaptcha-container';
 const FIREBASE_TIMEOUT_MS = 20000;
-const RETRY_DELAY_MS = 3000; // 3s before retry (visible to judges)
-const FALLBACK_DELAY_MS = 3000; // 3s after retry before demo (total ~6s)
+const RETRY_DELAY_MS = 3000;
 
 let _recaptchaVerifier = null;
 let _confirmationResult = null;
@@ -43,7 +47,7 @@ function _friendlyFirebaseError(e) {
   if (code === 'auth/missing-phone-number') return 'Please enter your phone number.';
   if (code === 'auth/invalid-verification-code') return 'Incorrect code. Please try again.';
   if (code === 'auth/code-expired') return 'Code expired. Please request a new one.';
-  return null; // infra error → fallback
+  return null; // infra/domain error → try Twilio fallback
 }
 
 function _withTimeout(promise, ms) {
@@ -85,16 +89,14 @@ async function _getRecaptchaVerifier(auth) {
 
 // ─── Web: Firebase send ───────────────────────────────────────────────────────
 async function _firebaseWebSendOtp(phone) {
-  _log('Firebase config check', {
+  _log('Firebase config', {
     hasApiKey: !!process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
     hasAuthDomain: !!process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
     hasAppId: !!process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
   });
-
   const fb = await initFirebase();
   if (!fb) { _log('Firebase init failed'); throw new Error('firebase_unavailable'); }
   _log('Firebase initialized');
-
   const e164 = `+91${phone}`;
   _log(`Firebase send to ${e164}`);
   const { signInWithPhoneNumber } = await import('firebase/auth');
@@ -123,14 +125,14 @@ async function _firebaseWebVerifyAndGetJwt(phone, otp) {
   return resp.data;
 }
 
-// ─── Native: Twilio via backend ───────────────────────────────────────────────
-async function _nativeSendOtp(phone) {
+// ─── Twilio via backend (used by both native AND web fallback) ────────────────
+async function _twilioSendOtp(phone) {
   _log(`Twilio send to +91${phone}`);
   await backendAuth.sendOTP(phone);
   _log('Twilio SMS dispatched');
 }
 
-async function _nativeVerifyOtp(phone, otp) {
+async function _twilioVerifyOtp(phone, otp) {
   _log('Twilio verify OTP');
   const data = await backendAuth.verifyOTP(phone, otp);
   _log('Twilio verify success');
@@ -141,71 +143,79 @@ async function _nativeVerifyOtp(phone, otp) {
 
 /**
  * sendOtp(phone)
- * Web    → { mode: 'firebase' }
- * Native → { mode: 'twilio' }
- * Fallback (after retry + delay) → { mode: 'demo', demoCode: '...' }
+ *
+ * Web:
+ *   1. Try Firebase → { mode: 'firebase' }
+ *   2. If Firebase fails → Try Twilio backend → { mode: 'twilio' }
+ *   3. If both fail → { mode: 'demo', demoCode }
+ *
+ * Native:
+ *   1. Try Twilio backend → { mode: 'twilio' }
+ *   2. If fails → { mode: 'demo', demoCode }
  */
 export async function sendOtp(phone) {
   _log(`Platform: ${Platform.OS}`);
 
-  // ── WEB: Firebase ─────────────────────────────────────────────────────────
+  // ── WEB ───────────────────────────────────────────────────────────────────
   if (Platform.OS === 'web') {
+    // Tier 1: Firebase
     if (_firebaseAvailable !== false) {
       try {
         await _firebaseWebSendOtp(phone);
         _firebaseAvailable = true;
         return { mode: 'firebase' };
       } catch (e) {
-        _log('Firebase send failed (attempt 1)', e?.code || e?.message);
+        _log('Firebase send failed', e?.code || e?.message);
         if (_isFirebaseError(e)) {
           const msg = _friendlyFirebaseError(e);
-          if (msg) throw new Error(msg);
+          if (msg) throw new Error(msg); // actionable error (invalid number etc.)
         }
-        // Retry once after 3s
-        _log('Retrying Firebase in 3s...');
+        // Infra/domain error — mark unavailable, fall to Twilio
+        _firebaseAvailable = false;
         _recaptchaVerifier = null;
-        await _sleep(RETRY_DELAY_MS);
-        try {
-          await _firebaseWebSendOtp(phone);
-          _firebaseAvailable = true;
-          return { mode: 'firebase' };
-        } catch (e2) {
-          _log('Firebase retry failed', e2?.code || e2?.message);
-          if (_isFirebaseError(e2)) {
-            const msg = _friendlyFirebaseError(e2);
-            if (msg) throw new Error(msg);
-          }
-          _firebaseAvailable = false;
-          _recaptchaVerifier = null;
-          _confirmationResult = null;
-        }
+        _confirmationResult = null;
+        _log('Firebase unavailable — trying Twilio backend on web');
       }
     }
-    // Web fallback — wait 3s more so total delay is ~6s before demo
-    _log('Fallback activated on web');
-    await _sleep(FALLBACK_DELAY_MS);
-    try { await backendAuth.sendOTP(phone); } catch (_) {}
+
+    // Tier 2: Twilio backend (works on web too — backend sends SMS)
+    try {
+      await _twilioSendOtp(phone);
+      return { mode: 'twilio' };
+    } catch (e) {
+      _log('Twilio send failed on web (attempt 1)', e?.message);
+      await _sleep(RETRY_DELAY_MS);
+      try {
+        await _twilioSendOtp(phone);
+        return { mode: 'twilio' };
+      } catch (e2) {
+        _log('Twilio retry failed on web', e2?.message);
+      }
+    }
+
+    // Tier 3: Demo (only if both Firebase AND Twilio failed)
+    _log('Both Firebase and Twilio failed — demo fallback');
     return { mode: 'demo', demoCode: randomSixDigitOtp() };
   }
 
-  // ── NATIVE: Twilio ────────────────────────────────────────────────────────
+  // ── NATIVE ────────────────────────────────────────────────────────────────
+  // Tier 1: Twilio
   try {
-    await _nativeSendOtp(phone);
+    await _twilioSendOtp(phone);
     return { mode: 'twilio' };
   } catch (e) {
     _log('Twilio send failed (attempt 1)', e?.message);
-    _log('Retrying Twilio in 3s...');
     await _sleep(RETRY_DELAY_MS);
     try {
-      await _nativeSendOtp(phone);
+      await _twilioSendOtp(phone);
       return { mode: 'twilio' };
     } catch (e2) {
       _log('Twilio retry failed', e2?.message);
     }
   }
-  // Native fallback — wait 3s more before demo
-  _log('Fallback activated on native');
-  await _sleep(FALLBACK_DELAY_MS);
+
+  // Tier 2: Demo
+  _log('Twilio failed — demo fallback');
   return { mode: 'demo', demoCode: randomSixDigitOtp() };
 }
 
@@ -214,6 +224,7 @@ export async function sendOtp(phone) {
  * Returns { access_token, refresh_token, user_id, is_new_user }
  */
 export async function verifyOtp(phone, otp, mode) {
+  // Firebase verify (web only)
   if (mode === 'firebase' && _confirmationResult) {
     try {
       return await _firebaseWebVerifyAndGetJwt(phone, otp);
@@ -223,14 +234,17 @@ export async function verifyOtp(phone, otp, mode) {
         const msg = _friendlyFirebaseError(e);
         if (msg) throw new Error(msg);
       }
-      _log('Firebase verify infra failure — falling back to backend verify');
+      // Firebase infra failure → fall through to Twilio verify
+      _log('Firebase verify failed — trying Twilio verify');
     }
   }
 
-  if (mode === 'twilio') {
-    return await _nativeVerifyOtp(phone, otp);
+  // Twilio verify (native + web fallback)
+  if (mode === 'twilio' || mode === 'firebase') {
+    return await _twilioVerifyOtp(phone, otp);
   }
 
+  // Demo verify (DEMO_MODE must be true on backend for this to work)
   _log('Demo verify via backend');
   return await backendAuth.verifyOTP(phone, otp);
 }
