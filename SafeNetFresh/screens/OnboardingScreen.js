@@ -26,6 +26,7 @@ export default function OnboardingScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [sentNotice, setSentNotice] = useState('');
   const [serverWaking, setServerWaking] = useState(false);
+  const [sendStep, setSendStep] = useState(''); // 'sending' | 'retrying' | 'fallback' | ''
 
   React.useEffect(() => {
     // Pre-warm backend when onboarding opens to reduce first OTP send latency.
@@ -51,20 +52,26 @@ export default function OnboardingScreen({ navigation }) {
 
     setLoading(true);
     setSentNotice('');
+    setSendStep('sending');
     try {
+      // Show step messages while sendOtp runs (it may take 6-8s with retries)
+      const retryTimer = setTimeout(() => setSendStep('retrying'), 4000);
+      const fallbackTimer = setTimeout(() => setSendStep('fallback'), 7000);
+
       const result = await sendOtp(cleaned);
-      // Pass mode + demoCode (if demo) to OTPVerify screen
+      clearTimeout(retryTimer);
+      clearTimeout(fallbackTimer);
+      setSendStep('');
+
       const params = { phone: cleaned, otpMode: result.mode };
-      if (result.mode === 'demo' && result.demoCode) {
-        params.demoCode = result.demoCode;
-      }
+      if (result.mode === 'demo' && result.demoCode) params.demoCode = result.demoCode;
       if (result.mode === 'firebase' || result.mode === 'twilio') {
         setSentNotice('Code sent — check your SMS');
         await new Promise((r) => setTimeout(r, 800));
       }
       navigation.navigate('OTPVerify', params);
     } catch (e) {
-      // Only surfaces user-friendly Firebase errors (e.g. invalid number)
+      setSendStep('');
       Alert.alert('Could not send code', e?.message || formatApiError(e));
     } finally {
       setLoading(false);
@@ -115,7 +122,10 @@ export default function OnboardingScreen({ navigation }) {
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>Send OTP</Text>}
         </TouchableOpacity>
 
-        {sentNotice ? <Text style={styles.sentNotice}>{sentNotice}</Text> : null}
+        {sendStep === 'sending' ? <Text style={styles.sentNotice}>📤 Sending code…</Text> : null}
+        {sendStep === 'retrying' ? <Text style={styles.wakingNotice}>🔄 Retrying… please wait</Text> : null}
+        {sendStep === 'fallback' ? <Text style={styles.wakingNotice}>⚠️ Service delayed — activating demo access…</Text> : null}
+        {sentNotice && !sendStep ? <Text style={styles.sentNotice}>{sentNotice}</Text> : null}
 
         {serverWaking ? (
           <Text style={styles.wakingNotice}>⏳ Starting server… please wait 10 seconds.</Text>

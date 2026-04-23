@@ -1,13 +1,13 @@
 /**
- * firebase.js
- * Lazy Firebase initializer — only loads when first called.
- * Safe to import anywhere; does nothing until initFirebase() is called.
+ * firebase.js — Lazy Firebase initializer
+ * Only loads when first called. Safe to import anywhere.
+ * Fixed: _initAttempted resets on failure so retry is possible.
  */
-import { Platform } from 'react-native';
 
 let _app = null;
 let _auth = null;
 let _initAttempted = false;
+let _initSuccess = false;
 
 function _getFirebaseConfig() {
   return {
@@ -25,15 +25,21 @@ function _configComplete(cfg) {
 }
 
 /**
- * Initialise Firebase once. Returns { app, auth } or null if config missing / init fails.
- * Safe to call multiple times — returns cached result after first call.
+ * Initialise Firebase once.
+ * Returns { app, auth } on success, null if config missing or init fails.
+ * On failure: resets state so the next call can retry.
  */
 export async function initFirebase() {
-  if (_initAttempted) return _app && _auth ? { app: _app, auth: _auth } : null;
+  // Return cached success immediately
+  if (_initAttempted && _initSuccess) return { app: _app, auth: _auth };
+  // If already attempted and failed, allow retry (don't cache failures)
   _initAttempted = true;
 
   const cfg = _getFirebaseConfig();
-  if (!_configComplete(cfg)) return null;
+  if (!_configComplete(cfg)) {
+    _initAttempted = false; // allow retry if env vars arrive later
+    return null;
+  }
 
   try {
     const { initializeApp, getApps, getApp } = await import('firebase/app');
@@ -42,14 +48,26 @@ export async function initFirebase() {
     const { getAuth } = await import('firebase/auth');
     _auth = getAuth(_app);
 
+    _initSuccess = true;
     return { app: _app, auth: _auth };
   } catch (e) {
+    // Reset so next call can retry
     _app = null;
     _auth = null;
+    _initAttempted = false;
+    _initSuccess = false;
     return null;
   }
 }
 
 export function getFirebaseAuth() {
   return _auth;
+}
+
+/** Force reset — used by resendOtp to allow fresh Firebase init */
+export function resetFirebase() {
+  _app = null;
+  _auth = null;
+  _initAttempted = false;
+  _initSuccess = false;
 }
