@@ -75,7 +75,7 @@ Traditional insurance covers accidents — not lost daily wages. Government sche
 ### As a Worker — phone or browser
 
 1. Open **[safenet-sage.vercel.app](https://safenet-sage.vercel.app)** — no install, no signup friction
-2. Enter any 10-digit mobile number → OTP animates digit-by-digit and auto-verifies in ~2 seconds
+2. Enter any 10-digit mobile number → Enter OTP sent to mobile or can enter random 6 numbers(safe mode- free tier)
 3. Select platform (Zomato / Swiggy / Other) → search any Indian city or tap GPS → pick a coverage tier
 4. Dashboard loads with **live weather**, **real AQI**, **Earnings DNA heatmap**, zone risk level, and Forecast Shield status
 5. Tap **"Simulate Disruption" → Heavy Rain** → watch the 6-step claim pipeline animate live → payout credited with the exact formula shown:
@@ -137,7 +137,7 @@ Open App
    ↓
 Enter phone number
    ↓
-OTP auto-fills & verifies (~2s)
+Enter otp (Real+Demo)
    ↓
 Select platform + search city or tap GPS
    ↓
@@ -151,7 +151,7 @@ Dashboard — live weather, AQI, Earnings DNA heatmap, zone risk
    ↓
 Claim pipeline fires automatically
    ↓
-₹ Credited — push notification + PDF receipt download
+₹ Credited — push notification 
 ```
 
 Returning users skip onboarding entirely. OTP → dashboard. Done in under 10 seconds.
@@ -273,7 +273,7 @@ scikit-learn DBSCAN runs on worker GPS + offline timestamps every 60 seconds. Wh
 
 | Mechanism | Detail |
 |---|---|
-| OTP login | 6-digit animated auto-fill; real SMS logic in production |
+| OTP login | 6-digit code sent or can enter random 6 numbers; real SMS logic but free tire(so demo also included)|
 | JWT token pair | Access + refresh tokens, silent renewal |
 | SHA-256 canonical identity | Phone → hash; prevents duplicate payouts across multiple platform accounts |
 | Device fingerprinting | Hardware fingerprint per login; new device → elevated fraud scrutiny |
@@ -359,7 +359,7 @@ devtrails-2026-alphanexus-phase2/
 ├── SafeNetFresh/                        ← Expo worker app (mobile + web)
 │   ├── screens/
 │   │   ├── OnboardingScreen.js          ← Phone entry + OTP send
-│   │   ├── OTPVerifyScreen.js           ← Animated auto-fill + verify
+│   │   ├── OTPVerifyScreen.js           ← Enter otp + verify
 │   │   ├── ProfileSetupScreen.js        ← 5-step onboarding wizard
 │   │   ├── DashboardScreen.js           ← Live weather, AQI, DNA heatmap
 │   │   ├── PolicyScreen.js              ← Coverage tiers + payment
