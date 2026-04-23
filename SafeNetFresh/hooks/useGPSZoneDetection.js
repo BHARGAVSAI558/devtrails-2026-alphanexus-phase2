@@ -25,38 +25,55 @@ function _log(msg, data) {
  */
 async function reverseGeocodeNominatim(latitude, longitude) {
   try {
+    // zoom=18 gives the most granular result (village/hamlet level)
     const url =
       `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(String(latitude))}` +
-      `&lon=${encodeURIComponent(String(longitude))}&format=json&addressdetails=1&zoom=16`;
+      `&lon=${encodeURIComponent(String(longitude))}&format=json&addressdetails=1&zoom=18`;
     const res = await fetch(url, {
       headers: { 'Accept-Language': 'en', 'User-Agent': 'SafeNet-App/1.0' },
     });
     if (!res.ok) throw new Error('nominatim_failed');
     const data = await res.json();
     const addr = data?.address || {};
-    // Prefer the most specific locality name available
-    const placeName =
+
+    _log('Nominatim raw address', addr);
+
+    // ── Village / locality name (most specific) ──────────────────────────
+    // For Indian rural: village > hamlet > suburb > neighbourhood > town
+    const village =
+      addr.village ||
+      addr.hamlet ||
       addr.neighbourhood ||
       addr.suburb ||
       addr.quarter ||
-      addr.hamlet ||
-      addr.village ||
-      addr.town ||
-      addr.city_district ||
-      addr.district ||
+      addr.isolated_dwelling ||
       data?.name ||
       null;
-    const cityName =
+
+    // ── Mandal (county in Nominatim for AP/Telangana) ─────────────────────
+    // Nominatim maps Indian mandals to addr.county
+    const mandal =
+      addr.county ||
+      addr.city_district ||
+      addr.district ||
+      null;
+
+    // ── District / city ───────────────────────────────────────────────────
+    const district =
+      addr.state_district ||
       addr.city ||
       addr.town ||
-      addr.county ||
-      addr.state_district ||
-      addr.state ||
       null;
-    _log('Nominatim reverse geocode', { placeName, cityName });
-    return { placeName, cityName };
+
+    // Build display: "Vaddeswaram, Gannavaram Mandal, Krishna District"
+    const parts = [village, mandal, district].filter(Boolean);
+    const placeName = village || null;
+    const cityName = parts.slice(1).join(', ') || null; // mandal + district
+
+    _log('Nominatim parsed', { village, mandal, district, placeName, cityName });
+    return { placeName, cityName, village, mandal, district, fullParts: parts };
   } catch {
-    return { placeName: null, cityName: null };
+    return { placeName: null, cityName: null, fullParts: [] };
   }
 }
 
@@ -87,11 +104,12 @@ async function reverseGeocodeOpenMeteo(latitude, longitude) {
 }
 
 async function reverseGeocode(latitude, longitude) {
-  // Try Nominatim first (more precise locality names)
+  // Try Nominatim first (village + mandal + district for India)
   const nom = await reverseGeocodeNominatim(latitude, longitude);
-  if (nom.placeName) return nom;
+  if (nom.placeName || (nom.fullParts && nom.fullParts.length > 0)) return nom;
   // Fallback to Open-Meteo
-  return reverseGeocodeOpenMeteo(latitude, longitude);
+  const om = await reverseGeocodeOpenMeteo(latitude, longitude);
+  return { ...om, fullParts: [om.placeName, om.cityName].filter(Boolean) };
 }
 
 // ─── Web high-accuracy geolocation ───────────────────────────────────────────
@@ -273,21 +291,19 @@ export function useGPSZoneDetection() {
       // ── Reverse geocode using exact coordinates ────────────────────────
       _log('Reverse geocoding', { lat: latitude.toFixed(5), lng: longitude.toFixed(5) });
       const geocoded = await reverseGeocode(latitude, longitude);
+
+      // fullParts = [village, mandal, district] — use all for display
+      const fullParts = geocoded.fullParts || [];
       if (geocoded.placeName) placeName = placeName || geocoded.placeName;
       if (geocoded.cityName) cityName = geocoded.cityName;
 
-      // Expo native reverse geocode as additional fallback
-      if (Platform.OS !== 'web' && !placeName) {
+      // Expo native reverse geocode only if Nominatim gave nothing
+      if (Platform.OS !== 'web' && fullParts.length === 0) {
         try {
           const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
           if (Array.isArray(reverse) && reverse.length > 0) {
             const row = reverse[0];
-            placeName =
-              row?.district ||
-              row?.subregion ||
-              row?.street ||
-              row?.name ||
-              null;
+            placeName = placeName || row?.district || row?.subregion || row?.street || row?.name || null;
             cityName = cityName || row?.city || row?.subregion || row?.region || null;
           }
         } catch (_) {}
@@ -301,12 +317,19 @@ export function useGPSZoneDetection() {
       const zoneId = String(detected.zone_id);
       const svcCity = detected?.city ? String(detected.city) : null;
       const svcName = detected?.zone_name ? String(detected.zone_name) : null;
-      const rawLabel =
-        [placeName, cityName || svcCity].filter(Boolean).join(', ') ||
-        svcName ||
-        svcCity ||
-        zoneId;
-      const displayName = formatShortLocation(rawLabel) || rawLabel;
+
+      // Build display label: prefer full village+mandal+district chain
+      // e.g. "Vaddeswaram · Gannavaram Mandal · Krishna District"
+      let displayName;
+      if (fullParts.length >= 2) {
+        // Use all parts joined — skip formatShortLocation which strips mandal/district
+        displayName = fullParts.join(' · ');
+      } else {
+        const rawLabel =
+          [placeName, cityName || svcCity].filter(Boolean).join(', ') ||
+          svcName || svcCity || zoneId;
+        displayName = rawLabel;
+      }
       const riskRaw = String(
         detected?.risk_label || detected?.risk_level || 'MEDIUM'
       ).toUpperCase();
@@ -333,8 +356,7 @@ export function useGPSZoneDetection() {
         city: cityName || svcCity || displayName,
         lat: latitude,
         lng: longitude,
-        placeName:
-          formatShortLocation(placeName || displayName) || placeName || displayName,
+        placeName: displayName,
         zone_name: svcName,
         accuracyLabel,
       };
