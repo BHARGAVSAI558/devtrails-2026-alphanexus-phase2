@@ -232,8 +232,8 @@ export default function OTPVerifyScreen({ navigation, route }) {
       <Text style={styles.header}>+91 {phone || '—'}</Text>
       <Text style={styles.sub}>
         {(isFirebaseMode || isTwilioMode) && !isFallback
-          ? 'We sent a real SMS to this number'
-          : 'We sent a 6-digit code to this number'}
+          ? 'We sent a 6-digit code to this number'
+          : 'If not get, then enter any 6 digits'}
       </Text>
       <Text style={styles.subMuted}>{subtitleText}</Text>
 
