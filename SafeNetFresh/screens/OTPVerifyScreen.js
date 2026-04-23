@@ -29,13 +29,14 @@ export default function OTPVerifyScreen({ navigation, route }) {
 
   const mode = otpMode || 'demo';
   const isFirebaseMode = mode === 'firebase';
+  const isTwilioMode = mode === 'twilio';
 
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [remain, setRemain] = useState(60);
   const [resending, setResending] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
-  const [isFallback, setIsFallback] = useState(!isFirebaseMode);
+  const [isFallback, setIsFallback] = useState(mode === 'demo');
 
   const submittedCodeRef = useRef(null);
   const verifyInFlight = useRef(false);
@@ -108,7 +109,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
         if (!msg || msg === 'firebase_timeout' || msg === 'no_confirmation_result' || msg === 'firebase_unavailable') {
           currentModeRef.current = 'demo';
           setIsFallback(true);
-          setStatusMsg('Verification service starting… using instant demo access.');
+          setStatusMsg('Verification service unavailable. Instant demo access enabled.');
           submittedCodeRef.current = null;
           setDigits(['', '', '', '', '', '']);
           demoOtpRef.current = randomSixDigitOtp();
@@ -217,8 +218,8 @@ export default function OTPVerifyScreen({ navigation, route }) {
   };
 
   const subtitleText = isFallback
-    ? 'Verification service starting… using instant demo access.'
-    : isWeb
+    ? 'Verification service unavailable. Instant demo access enabled.'
+    : (isFirebaseMode || isTwilioMode)
       ? 'Enter the 6-digit code from your SMS.'
       : 'Enter the 6-digit code from your SMS.';
 
@@ -229,7 +230,9 @@ export default function OTPVerifyScreen({ navigation, route }) {
       <Text style={styles.kicker}>Verification</Text>
       <Text style={styles.header}>+91 {phone || '—'}</Text>
       <Text style={styles.sub}>
-        {isFirebaseMode && !isFallback ? 'We sent a real SMS to this number' : 'We sent a 6-digit code to this number'}
+        {(isFirebaseMode || isTwilioMode) && !isFallback
+          ? 'We sent a real SMS to this number'
+          : 'We sent a 6-digit code to this number'}
       </Text>
       <Text style={styles.subMuted}>{subtitleText}</Text>
 

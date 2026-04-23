@@ -58,7 +58,7 @@ export default function OnboardingScreen({ navigation }) {
       if (result.mode === 'demo' && result.demoCode) {
         params.demoCode = result.demoCode;
       }
-      if (result.mode === 'firebase') {
+      if (result.mode === 'firebase' || result.mode === 'twilio') {
         setSentNotice('Code sent — check your SMS');
         await new Promise((r) => setTimeout(r, 800));
       }
