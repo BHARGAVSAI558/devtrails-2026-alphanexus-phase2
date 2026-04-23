@@ -131,7 +131,29 @@ SafeNet:             learn each worker's earning reality → pay exactly what th
 
 ## 💰 Actuarial Basis & Premium Justification
 
-SafeNet's weekly premiums are not guesses. They are derived from a bottom-up expected loss model built on Hyderabad food delivery zone baselines — and structured to create a sustainable pool that pays workers fairly while giving insurers something no traditional product can offer.
+SafeNet's weekly premiums are not guesses. They are derived from a bottom-up expected loss model built on micro location food delivery zone baselines — and structured to create a sustainable pool that pays workers fairly while giving insurers something no traditional product can offer.
+
+
+### 📍 Location & Risk Adaptive Pricing
+
+SafeNet does not use one flat national premium. Weekly plans dynamically adjust based on local disruption risk and worker exposure.
+
+Pricing signals include:
+
+- City-level weather volatility (rain / floods / heat)
+- Zone disruption frequency over last 90 days
+- AQI stress frequency
+- Worker peak earning hours (Earnings DNA exposure)
+- Historical claim ratio of the zone
+- Trust score / fraud risk signals
+
+Examples:
+
+- Flood-prone Vijayawada delivery zone → slightly higher premium
+- Stable Bengaluru central zone → standard premium
+- Low-disruption Tier-2 zone → lower premium
+
+This ensures workers pay for their real risk exposure — not someone else’s.
 
 ### Base Assumptions
 
