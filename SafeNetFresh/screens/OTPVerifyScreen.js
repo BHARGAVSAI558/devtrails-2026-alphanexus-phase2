@@ -27,7 +27,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
   const { signIn, dispatch, signOut } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const mode = otpMode || 'demo';
+  const mode = otpMode || 'twilio'; // default to twilio, never demo unless explicitly set
   const isFirebaseMode = mode === 'firebase';
   const isTwilioMode = mode === 'twilio';
 
@@ -36,6 +36,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
   const [remain, setRemain] = useState(60);
   const [resending, setResending] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
+  // isFallback = true ONLY when mode is explicitly 'demo'
   const [isFallback, setIsFallback] = useState(mode === 'demo');
 
   const submittedCodeRef = useRef(null);
