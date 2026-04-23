@@ -1,7 +1,9 @@
 import hmac
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +21,37 @@ from structlog.contextvars import bind_contextvars
 
 log = get_logger(__name__)
 router = APIRouter()
+
+# ── Firebase Admin SDK (lazy init) ────────────────────────────────────────────
+_firebase_app = None
+
+def _get_firebase_app():
+    global _firebase_app
+    if _firebase_app is not None:
+        return _firebase_app
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+        # Try path from env first, then look next to this file's package root
+        cred_path = (settings.FIREBASE_CREDENTIALS_PATH or "").strip()
+        if not cred_path:
+            cred_path = str(Path(__file__).resolve().parents[4] / "firebase-service-account.json")
+        if not Path(cred_path).exists():
+            return None
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(cred_path)
+            _firebase_app = firebase_admin.initialize_app(cred)
+        else:
+            _firebase_app = firebase_admin.get_app()
+        return _firebase_app
+    except Exception as exc:
+        log.warning("firebase_admin_init_failed", error=str(exc))
+        return None
+
+
+class FirebaseVerifyRequest(BaseModel):
+    id_token: str
+    phone_number: str  # e.g. "9876543210" (10 digits, no +91)
 
 
 def _const_time_eq(expected: str, provided: str) -> bool:
@@ -260,4 +293,94 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
         refresh_token=new_refresh,
         user_id=user.id,
         is_new_user=False,
+    )
+
+
+@router.post("/firebase-verify", response_model=TokenResponse)
+async def firebase_verify(
+    request: Request,
+    body: FirebaseVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Verify a Firebase Phone Auth ID token and issue a SafeNet JWT.
+    The frontend sends the Firebase id_token after signInWithPhoneNumber succeeds.
+    Falls back gracefully — if Firebase Admin SDK is unavailable, returns 503
+    so the frontend can fall back to demo mode.
+    """
+    app_fb = _get_firebase_app()
+    if app_fb is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="firebase_unavailable",
+        )
+
+    # Verify the Firebase ID token
+    try:
+        import anyio
+        from firebase_admin import auth as fb_auth
+
+        decoded = await anyio.to_thread.run_sync(
+            lambda: fb_auth.verify_id_token(body.id_token)
+        )
+    except Exception as exc:
+        log.warning("firebase_token_verify_failed", error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Firebase token verification failed.",
+        )
+
+    # The phone in the Firebase token is +91XXXXXXXXXX — strip +91
+    firebase_phone = str(decoded.get("phone_number") or "").strip()
+    clean_phone = firebase_phone.lstrip("+").lstrip("91") if firebase_phone.startswith("+91") else body.phone_number
+    # Normalise: always use the 10-digit version
+    if len(clean_phone) > 10:
+        clean_phone = clean_phone[-10:]
+    if not clean_phone:
+        clean_phone = body.phone_number
+
+    # Upsert user
+    result = await db.execute(select(User).where(User.phone == clean_phone))
+    user = result.scalar_one_or_none()
+    is_new_user = False
+    if not user:
+        is_new_user = True
+        user = User(phone=clean_phone, canonical_hash=generate_canonical_hash(clean_phone))
+        db.add(user)
+        await db.flush()
+        await db.refresh(user)
+        log.info("firebase_user_created", engine_name="auth_route", worker_id=user.id)
+    else:
+        if not user.canonical_hash:
+            user.canonical_hash = generate_canonical_hash(clean_phone)
+        log.info("firebase_user_login", engine_name="auth_route", worker_id=user.id)
+
+    bind_contextvars(worker_id=user.id)
+
+    db.add(Log(
+        user_id=user.id,
+        event_type="firebase_otp_verified",
+        detail=f"phone={clean_phone}",
+        ip_address=request.client.host if request.client else None,
+    ))
+    await db.commit()
+
+    token_data = {"user_id": user.id, "phone": user.phone}
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+    refresh_payload = verify_token(refresh_token, token_type="refresh")
+    db.add(RefreshToken(
+        user_id=user.id,
+        token_jti=str(refresh_payload.get("jti")),
+        token_value=refresh_token,
+        used=False,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+    ))
+    await db.commit()
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user_id=user.id,
+        is_new_user=is_new_user,
     )

@@ -15,24 +15,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { workers } from '../services/api';
-import { verifyOtp, resendOtp } from '../services/authOtp';
+import { verifyOtp, resendOtp, randomSixDigitOtp } from '../services/authOtp';
 import { useAuth } from '../contexts/AuthContext';
 
 const BRAND = '#1A56DB';
 const AUTOFILL_STEP_MS = 80;
-
 const isWeb = Platform.OS === 'web';
-
-function randomSixDigitOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
 
 export default function OTPVerifyScreen({ navigation, route }) {
   const { phone, otpMode, demoCode: routeDemoCode } = route.params || {};
   const { signIn, dispatch, signOut } = useAuth();
   const insets = useSafeAreaInsets();
 
-  // otpMode: 'firebase' | 'demo' | undefined (legacy — treat as demo)
   const mode = otpMode || 'demo';
   const isFirebaseMode = mode === 'firebase';
 
@@ -40,7 +34,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [remain, setRemain] = useState(60);
   const [resending, setResending] = useState(false);
-  const [statusMsg, setStatusMsg] = useState('');   // inline status (not alert)
+  const [statusMsg, setStatusMsg] = useState('');
   const [isFallback, setIsFallback] = useState(!isFirebaseMode);
 
   const submittedCodeRef = useRef(null);
@@ -49,49 +43,24 @@ export default function OTPVerifyScreen({ navigation, route }) {
   const demoOtpRef = useRef(routeDemoCode || randomSixDigitOtp());
   const digitsRef = useRef('');
   const currentModeRef = useRef(mode);
+  // Store verifyWithCode in a ref so demo autofill can call it after it's defined
+  const verifyWithCodeRef = useRef(null);
 
   useEffect(() => { digitsRef.current = digits.join(''); }, [digits]);
 
-  // ── Auto-fill for demo/fallback mode ──────────────────────────────────────
-  const _startDemoAutofill = useCallback((code) => {
-    const timers = [];
-    const t0 = setTimeout(() => {
-      if (verifyInFlight.current || digitsRef.current.length > 0) return;
-      code.split('').forEach((d, i) => {
-        const t = setTimeout(() => {
-          setDigits((prev) => { const next = [...prev]; next[i] = d; return next; });
-        }, i * AUTOFILL_STEP_MS);
-        timers.push(t);
-      });
-      const tVerify = setTimeout(() => {
-        if (verifyInFlight.current) return;
-        submittedCodeRef.current = code;
-        verifyWithCode(code);
-      }, code.length * AUTOFILL_STEP_MS + 200);
-      timers.push(tVerify);
-    }, 2000);
-    return () => { clearTimeout(t0); timers.forEach(clearTimeout); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (isFallback) {
-      return _startDemoAutofill(demoOtpRef.current);
-    }
-    return undefined;
-  }, [isFallback, _startDemoAutofill]);
-
-  useEffect(() => {
-    if (!isWeb) return undefined;
-    const t = setTimeout(() => inputsRef.current[0]?.focus(), 200);
-    return () => clearTimeout(t);
-  }, []);
-
+  // Countdown timer
   useEffect(() => {
     if (remain <= 0) return undefined;
     const id = setTimeout(() => setRemain((r) => r - 1), 1000);
     return () => clearTimeout(id);
   }, [remain]);
+
+  // Web focus
+  useEffect(() => {
+    if (!isWeb) return undefined;
+    const t = setTimeout(() => inputsRef.current[0]?.focus(), 200);
+    return () => clearTimeout(t);
+  }, []);
 
   // ── Core verify ───────────────────────────────────────────────────────────
   const verifyWithCode = useCallback(
@@ -125,30 +94,27 @@ export default function OTPVerifyScreen({ navigation, route }) {
           dispatch({ type: 'SET_PROFILE', profile });
           if (profile?.is_profile_complete === false) {
             navigation.replace('ProfileSetup');
-            return;
           }
         } catch (e) {
-          const status = e?.response?.status;
-          if (status === 401) { await signOut(); navigation.replace('Onboarding'); return; }
-          if (status === 404) { dispatch({ type: 'SET_PROFILE_READY', ready: false }); navigation.replace('ProfileSetup'); return; }
+          const s = e?.response?.status;
+          if (s === 401) { await signOut(); navigation.replace('Onboarding'); return; }
+          if (s === 404) { dispatch({ type: 'SET_PROFILE_READY', ready: false }); navigation.replace('ProfileSetup'); return; }
           dispatch({ type: 'SET_PROFILE_READY', ready: true });
         }
       } catch (e) {
         const msg = e?.message || e?.response?.data?.detail;
 
-        // If Firebase verify failed for infra reasons, silently switch to demo
-        if (!msg || msg === 'firebase_timeout' || msg === 'no_confirmation_result') {
+        // Infra failure during Firebase verify → silently switch to demo
+        if (!msg || msg === 'firebase_timeout' || msg === 'no_confirmation_result' || msg === 'firebase_unavailable') {
           currentModeRef.current = 'demo';
           setIsFallback(true);
           setStatusMsg('Verification service starting… using instant demo access.');
           submittedCodeRef.current = null;
           setDigits(['', '', '', '', '', '']);
           demoOtpRef.current = randomSixDigitOtp();
-          // Re-trigger demo autofill
           return;
         }
 
-        // User-facing errors (wrong code, expired, etc.)
         setStatusMsg('');
         Alert.alert('Verification failed', typeof msg === 'string' ? msg : 'Please try again.');
         submittedCodeRef.current = null;
@@ -157,14 +123,41 @@ export default function OTPVerifyScreen({ navigation, route }) {
       } finally {
         verifyInFlight.current = false;
         setLoading(false);
-        if (statusMsg === 'Verifying…') setStatusMsg('');
+        setStatusMsg((prev) => prev === 'Verifying…' ? '' : prev);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [phone, signIn, dispatch, navigation, signOut]
   );
 
-  // Auto-submit when 6 digits filled manually
+  // Keep ref in sync so demo autofill can call the latest version
+  useEffect(() => { verifyWithCodeRef.current = verifyWithCode; }, [verifyWithCode]);
+
+  // ── Demo autofill — uses ref to avoid stale closure ───────────────────────
+  useEffect(() => {
+    if (!isFallback) return undefined;
+    const code = demoOtpRef.current;
+    const timers = [];
+
+    const t0 = setTimeout(() => {
+      if (verifyInFlight.current || digitsRef.current.length > 0) return;
+      code.split('').forEach((d, i) => {
+        const t = setTimeout(() => {
+          setDigits((prev) => { const next = [...prev]; next[i] = d; return next; });
+        }, i * AUTOFILL_STEP_MS);
+        timers.push(t);
+      });
+      const tVerify = setTimeout(() => {
+        if (verifyInFlight.current) return;
+        submittedCodeRef.current = code;
+        verifyWithCodeRef.current?.(code);
+      }, code.length * AUTOFILL_STEP_MS + 300);
+      timers.push(tVerify);
+    }, 2000);
+
+    return () => { clearTimeout(t0); timers.forEach(clearTimeout); };
+  }, [isFallback]); // re-runs when fallback is triggered
+
+  // Auto-submit on manual 6-digit entry
   useEffect(() => {
     const code = digits.join('');
     if (code.length !== 6 || loading) return;
@@ -173,14 +166,14 @@ export default function OTPVerifyScreen({ navigation, route }) {
     verifyWithCode(code);
   }, [digits, loading, verifyWithCode]);
 
-  // ── Digit input handlers ──────────────────────────────────────────────────
+  // ── Digit handlers ────────────────────────────────────────────────────────
   const onChangeDigit = (text, index) => {
     const cleaned = text.replace(/\D/g, '');
     if (cleaned.length > 1) {
       const chars = cleaned.slice(0, 6).split('');
       setDigits((prev) => {
         const next = [...prev];
-        for (let j = 0; j < chars.length && index + j < 6; j += 1) next[index + j] = chars[j];
+        for (let j = 0; j < chars.length && index + j < 6; j++) next[index + j] = chars[j];
         return next;
       });
       setTimeout(() => inputsRef.current[Math.min(index + chars.length, 5)]?.focus(), 0);
@@ -207,8 +200,8 @@ export default function OTPVerifyScreen({ navigation, route }) {
       const result = await resendOtp(phone);
       currentModeRef.current = result.mode;
       const isDemo = result.mode === 'demo';
-      setIsFallback(isDemo);
       if (isDemo && result.demoCode) demoOtpRef.current = result.demoCode;
+      setIsFallback(isDemo);
       setRemain(60);
       submittedCodeRef.current = null;
       setDigits(['', '', '', '', '', '']);
@@ -223,11 +216,10 @@ export default function OTPVerifyScreen({ navigation, route }) {
     }
   };
 
-  // ── Subtitle text ─────────────────────────────────────────────────────────
   const subtitleText = isFallback
     ? 'Verification service starting… using instant demo access.'
     : isWeb
-      ? 'Enter the 6-digit code from your SMS, or wait for auto-fill.'
+      ? 'Enter the 6-digit code from your SMS.'
       : 'Enter the 6-digit code from your SMS.';
 
   const padStyle = [styles.container, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }];
@@ -236,7 +228,9 @@ export default function OTPVerifyScreen({ navigation, route }) {
     <>
       <Text style={styles.kicker}>Verification</Text>
       <Text style={styles.header}>+91 {phone || '—'}</Text>
-      <Text style={styles.sub}>We sent a 6-digit code to this number</Text>
+      <Text style={styles.sub}>
+        {isFirebaseMode && !isFallback ? 'We sent a real SMS to this number' : 'We sent a 6-digit code to this number'}
+      </Text>
       <Text style={styles.subMuted}>{subtitleText}</Text>
 
       {statusMsg ? (
@@ -256,7 +250,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
           onChangeText={(t) => {
             const c = t.replace(/\D/g, '').slice(0, 6);
             const next = ['', '', '', '', '', ''];
-            for (let i = 0; i < c.length; i += 1) next[i] = c[i];
+            for (let i = 0; i < c.length; i++) next[i] = c[i];
             setDigits(next);
           }}
           editable={!loading}
@@ -293,9 +287,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
         onPress={() => verifyWithCode(digits.join(''))}
         disabled={loading || digits.join('').length !== 6}
       >
-        {loading
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.btnText}>Verify &amp; Login</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Verify & Login</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity

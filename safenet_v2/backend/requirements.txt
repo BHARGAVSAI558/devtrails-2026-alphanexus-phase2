@@ -28,3 +28,4 @@ matplotlib
 fpdf2>=2.7.0
 razorpay>=1.4.0
 google-generativeai>=0.8.0
+firebase-admin>=6.5.0

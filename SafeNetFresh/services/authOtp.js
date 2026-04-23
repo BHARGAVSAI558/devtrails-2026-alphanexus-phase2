@@ -1,39 +1,26 @@
 /**
  * authOtp.js
- * Unified OTP service with two-tier strategy:
- *
- * Tier 1 — Firebase Phone Auth (real SMS)
- *   Works on: Expo web, Vercel, localhost (with reCAPTCHA invisible verifier)
- *   On native (iOS/Android): uses signInWithPhoneNumber directly
- *
- * Tier 2 — SafeNet backend demo fallback (current system)
- *   Activates automatically when Firebase is unavailable, misconfigured,
- *   quota exceeded, reCAPTCHA fails, or any unexpected error occurs.
- *   Behaviour: random 6-digit OTP auto-filled after 2 s, backend accepts any
- *   6-digit code in DEMO_MODE.
- *
- * The caller (OnboardingScreen / OTPVerifyScreen) never needs to know which
- * tier is active — the API surface is identical.
+ * Two-tier OTP:
+ *   Tier 1 — Firebase Phone Auth → backend /auth/firebase-verify → SafeNet JWT
+ *   Tier 2 — Demo fallback (auto-fill random 6-digit, backend DEMO_MODE accepts any)
  */
 
 import { Platform } from 'react-native';
 import { auth as backendAuth } from './api';
 import { initFirebase } from './firebase';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
+import axios from 'axios';
+import { BACKEND_URL } from './api';
 
 const RECAPTCHA_CONTAINER_ID = 'safenet-recaptcha-container';
 const FIREBASE_TIMEOUT_MS = 15000;
 
-// ─── Module-level state ───────────────────────────────────────────────────────
-
 let _recaptchaVerifier = null;
-let _confirmationResult = null; // Firebase confirmation object for web
-let _firebaseAvailable = null;  // null = unknown, true/false after first attempt
+let _confirmationResult = null;
+let _firebaseAvailable = null; // null=unknown, true/false after first attempt
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function _randomOtp() {
+export function randomSixDigitOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
@@ -45,14 +32,11 @@ function _friendlyFirebaseError(e) {
   const code = e?.code || '';
   if (code === 'auth/invalid-phone-number') return 'Invalid phone number format.';
   if (code === 'auth/too-many-requests') return 'Too many attempts. Please wait a moment.';
-  if (code === 'auth/quota-exceeded') return null; // trigger fallback silently
-  if (code === 'auth/captcha-check-failed') return null; // trigger fallback silently
-  if (code === 'auth/network-request-failed') return null; // trigger fallback silently
-  if (code === 'auth/internal-error') return null; // trigger fallback silently
   if (code === 'auth/missing-phone-number') return 'Please enter your phone number.';
   if (code === 'auth/invalid-verification-code') return 'Incorrect code. Please try again.';
   if (code === 'auth/code-expired') return 'Code expired. Please request a new one.';
-  return null; // unknown → trigger fallback
+  // All infra errors → return null to trigger silent fallback
+  return null;
 }
 
 async function _withTimeout(promise, ms) {
@@ -64,7 +48,7 @@ async function _withTimeout(promise, ms) {
   ]);
 }
 
-// ─── reCAPTCHA setup (web only) ───────────────────────────────────────────────
+// ─── reCAPTCHA (web only) ─────────────────────────────────────────────────────
 
 async function _ensureRecaptchaContainer() {
   if (typeof document === 'undefined') return;
@@ -87,7 +71,7 @@ async function _getRecaptchaVerifier(auth) {
   return _recaptchaVerifier;
 }
 
-// ─── Firebase send OTP ────────────────────────────────────────────────────────
+// ─── Firebase send ────────────────────────────────────────────────────────────
 
 async function _firebaseSendOtp(phone) {
   const fb = await initFirebase();
@@ -103,7 +87,6 @@ async function _firebaseSendOtp(phone) {
       FIREBASE_TIMEOUT_MS
     );
   } else {
-    // Native: Firebase uses APNs / Play Services silently — no reCAPTCHA needed
     _confirmationResult = await _withTimeout(
       signInWithPhoneNumber(fb.auth, e164),
       FIREBASE_TIMEOUT_MS
@@ -111,94 +94,83 @@ async function _firebaseSendOtp(phone) {
   }
 }
 
-// ─── Firebase verify OTP ─────────────────────────────────────────────────────
+// ─── Firebase verify → get Firebase ID token → call backend ──────────────────
 
-async function _firebaseVerifyOtp(otp) {
+async function _firebaseVerifyAndGetJwt(phone, otp) {
   if (!_confirmationResult) throw new Error('no_confirmation_result');
+
+  // 1. Confirm OTP with Firebase
   const result = await _withTimeout(
     _confirmationResult.confirm(otp),
     FIREBASE_TIMEOUT_MS
   );
-  // result.user is the Firebase user — we don't use it directly;
-  // we still call our backend to get SafeNet JWT.
-  return result;
+
+  // 2. Get Firebase ID token
+  const idToken = await result.user.getIdToken();
+
+  // 3. Exchange with SafeNet backend for SafeNet JWT
+  const resp = await axios.post(
+    `${BACKEND_URL}/api/v1/auth/firebase-verify`,
+    { id_token: idToken, phone_number: phone },
+    { timeout: 30000 }
+  );
+  return resp.data; // { access_token, refresh_token, user_id, is_new_user }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * sendOtp(phone)
- *
- * Returns:
- *   { mode: 'firebase' }  — real SMS sent via Firebase
- *   { mode: 'demo', demoCode: '123456' }  — fallback, use this code
- *
- * Never throws a user-visible error for infrastructure failures.
+ * Returns { mode: 'firebase' } or { mode: 'demo', demoCode: '123456' }
  */
 export async function sendOtp(phone) {
-  // Try Firebase first (only if config is present)
   if (_firebaseAvailable !== false) {
     try {
       await _firebaseSendOtp(phone);
       _firebaseAvailable = true;
       return { mode: 'firebase' };
     } catch (e) {
-      // Friendly Firebase errors that should surface to user
       if (_isFirebaseError(e)) {
         const msg = _friendlyFirebaseError(e);
-        if (msg) throw new Error(msg); // surface to UI
+        if (msg) throw new Error(msg); // surface to UI (wrong number etc.)
       }
-      // All other failures → fall through to demo mode
+      // Infra failure → fall through to demo
       _firebaseAvailable = false;
       _recaptchaVerifier = null;
       _confirmationResult = null;
     }
   }
 
-  // Tier 2: backend send-otp (Twilio if configured, else console OTP)
-  try {
-    await backendAuth.sendOTP(phone);
-  } catch (_) {
-    // Backend also failed — pure demo mode, no SMS at all
-  }
+  // Tier 2: call backend send-otp (Twilio if configured, else console)
+  try { await backendAuth.sendOTP(phone); } catch (_) {}
 
-  const demoCode = _randomOtp();
-  return { mode: 'demo', demoCode };
+  return { mode: 'demo', demoCode: randomSixDigitOtp() };
 }
 
 /**
  * verifyOtp(phone, otp, mode)
- *
- * mode: 'firebase' | 'demo'
- *
- * Returns the SafeNet backend token response:
- *   { access_token, refresh_token, user_id, is_new_user }
- *
- * Never throws for infrastructure failures — falls back to demo verify.
+ * Returns { access_token, refresh_token, user_id, is_new_user }
  */
 export async function verifyOtp(phone, otp, mode) {
-  // Tier 1: Firebase verify → then backend verify-otp with the same code
   if (mode === 'firebase' && _confirmationResult) {
     try {
-      await _firebaseVerifyOtp(otp);
-      // Firebase confirmed — now get SafeNet JWT
-      return await backendAuth.verifyOTP(phone, otp);
+      return await _firebaseVerifyAndGetJwt(phone, otp);
     } catch (e) {
       if (_isFirebaseError(e)) {
         const msg = _friendlyFirebaseError(e);
-        if (msg) throw new Error(msg); // surface invalid-code errors
+        if (msg) throw new Error(msg); // wrong code / expired → show to user
       }
-      // Firebase verify failed for infra reasons → fall through to backend
+      // Backend firebase-verify returned 503 (firebase unavailable) or other infra error
+      // → fall through to demo verify
     }
   }
 
-  // Tier 2: backend verify (works in DEMO_MODE with any 6-digit code)
+  // Tier 2: backend verify-otp (DEMO_MODE accepts any 6-digit code)
   return await backendAuth.verifyOTP(phone, otp);
 }
 
 /**
- * resendOtp(phone, currentMode)
- * Resets confirmation state and re-sends.
+ * resendOtp(phone) — resets state and re-sends
  */
 export async function resendOtp(phone) {
   _confirmationResult = null;
