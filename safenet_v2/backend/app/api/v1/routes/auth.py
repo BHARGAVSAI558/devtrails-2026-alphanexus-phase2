@@ -1,4 +1,5 @@
 import hmac
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -30,16 +31,29 @@ def _get_firebase_app():
     if _firebase_app is not None:
         return _firebase_app
     try:
+        import json
         import firebase_admin
         from firebase_admin import credentials
-        # Try path from env first, then look next to this file's package root
+
+        # Option 1: JSON string in env var FIREBASE_SERVICE_ACCOUNT_JSON
+        sa_json = (os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON") or "").strip()
+        if sa_json:
+            sa_dict = json.loads(sa_json)
+            cred = credentials.Certificate(sa_dict)
+            if not firebase_admin._apps:
+                _firebase_app = firebase_admin.initialize_app(cred)
+            else:
+                _firebase_app = firebase_admin.get_app()
+            return _firebase_app
+
+        # Option 2: path to JSON file (FIREBASE_CREDENTIALS_PATH env or local file)
         cred_path = (settings.FIREBASE_CREDENTIALS_PATH or "").strip()
         if not cred_path:
             cred_path = str(Path(__file__).resolve().parents[4] / "firebase-service-account.json")
         if not Path(cred_path).exists():
             return None
+        cred = credentials.Certificate(cred_path)
         if not firebase_admin._apps:
-            cred = credentials.Certificate(cred_path)
             _firebase_app = firebase_admin.initialize_app(cred)
         else:
             _firebase_app = firebase_admin.get_app()
