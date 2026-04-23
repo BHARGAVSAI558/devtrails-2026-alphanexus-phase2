@@ -221,8 +221,8 @@ export default function OTPVerifyScreen({ navigation, route }) {
   const subtitleText = isFallback
     ? 'Verification service unavailable. Instant demo access enabled.'
     : (isFirebaseMode || isTwilioMode)
-      ? 'Enter the 6-digit code from your SMS.'
-      : 'Enter the 6-digit code from your SMS.';
+      ? 'If not get, then enter any 6 digits.'
+      : 'If not get, then enter any 6 digits';
 
   const padStyle = [styles.container, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }];
 
