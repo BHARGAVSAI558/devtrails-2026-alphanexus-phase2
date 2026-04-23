@@ -93,7 +93,7 @@ export default function ProfileSetupScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [successPolicy, setSuccessPolicy] = useState(null);
   const tierRef = useRef('Standard');
-  const { detectZone, gpsLoading, gpsError } = useGPSZoneDetection();
+  const { detectZone, gpsLoading, gpsError, gpsStatus } = useGPSZoneDetection();
 
   const shieldScale = useRef(new Animated.Value(0.3)).current;
 
@@ -482,6 +482,19 @@ export default function ProfileSetupScreen({ navigation }) {
                     <Text style={styles.gpsBtnText}>Use current location</Text>
                   </>}
             </TouchableOpacity>
+
+            {gpsLoading && gpsStatus === 'detecting' ? (
+              <Text style={styles.gpsStatusText}>📍 Detecting GPS…</Text>
+            ) : null}
+            {gpsLoading && gpsStatus === 'improving' ? (
+              <Text style={styles.gpsStatusText}>🔄 Improving accuracy…</Text>
+            ) : null}
+            {gpsLoading && gpsStatus === 'refining' ? (
+              <Text style={styles.gpsStatusText}>✨ Found exact location</Text>
+            ) : null}
+            {zone?.accuracyLabel && !gpsLoading ? (
+              <Text style={styles.gpsAccuracyLabel}>📍 {zone.accuracyLabel}</Text>
+            ) : null}
             {gpsError ? <Text style={styles.gpsError}>{gpsError}</Text> : null}
 
             <View style={styles.rowNav}>
@@ -738,6 +751,8 @@ const styles = StyleSheet.create({
   gpsBtnIcon: { fontSize: 16 },
   gpsBtnText: { color: BRAND, fontWeight: '800', fontSize: 15 },
   gpsError: { color: '#b91c1c', fontSize: 12, fontWeight: '600', textAlign: 'center', marginBottom: 8 },
+  gpsStatusText: { color: '#1d4ed8', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 6 },
+  gpsAccuracyLabel: { color: '#059669', fontSize: 12, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
   searchBox: {
     borderWidth: 2,
     borderColor: '#bfdbfe',
