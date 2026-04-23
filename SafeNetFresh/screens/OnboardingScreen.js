@@ -123,12 +123,12 @@ export default function OnboardingScreen({ navigation }) {
         </TouchableOpacity>
 
         {sendStep === 'sending' ? <Text style={styles.sentNotice}>📤 Sending code…</Text> : null}
-        {sendStep === 'retrying' ? <Text style={styles.wakingNotice}>🔄 Retrying… please wait</Text> : null}
-        {sendStep === 'fallback' ? <Text style={styles.wakingNotice}>⚠️ Service delayed — activating demo access…</Text> : null}
+        {sendStep === 'retrying' ? <Text style={styles.wakingNotice}>🔄 Server starting… please wait</Text> : null}
+        {sendStep === 'fallback' ? <Text style={styles.wakingNotice}>⚠️ Just few seconds — activating server…</Text> : null}
         {sentNotice && !sendStep ? <Text style={styles.sentNotice}>{sentNotice}</Text> : null}
 
         {serverWaking ? (
-          <Text style={styles.wakingNotice}>⏳ Starting server… please wait 10 seconds.</Text>
+          <Text style={styles.wakingNotice}>⏳ Starting server… please wait few seconds.</Text>
         ) : null}
 
         <Text style={styles.terms}>By continuing, you agree to our Terms and Privacy Policy</Text>
