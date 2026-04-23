@@ -14,81 +14,72 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { auth, workers } from '../services/api';
+import { workers } from '../services/api';
+import { verifyOtp, resendOtp } from '../services/authOtp';
 import { useAuth } from '../contexts/AuthContext';
 
 const BRAND = '#1A56DB';
-const SMS_AUTOFILL_MS = 2000;
-const AUTOFILL_STEP_MS = 80; // ms between each digit fill for animation
+const AUTOFILL_STEP_MS = 80;
 
 const isWeb = Platform.OS === 'web';
-
-/**
- * Demo OTP UX: random 6-digit auto-fill + submit (matches backend DEMO_MODE accepting any 6 digits).
- * - app.json `expo.extra.DEMO_MODE: true` (default for your QR / EAS builds)
- * - or EAS env `EXPO_PUBLIC_DEMO_OTP=1` at build time
- */
-function isClientDemoOtpEnabled() {
-  // Product requirement: auto-fill random OTP quickly for demo flows.
-  return true;
-}
 
 function randomSixDigitOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 export default function OTPVerifyScreen({ navigation, route }) {
-  const { phone } = route.params || {};
+  const { phone, otpMode, demoCode: routeDemoCode } = route.params || {};
   const { signIn, dispatch, signOut } = useAuth();
   const insets = useSafeAreaInsets();
+
+  // otpMode: 'firebase' | 'demo' | undefined (legacy — treat as demo)
+  const mode = otpMode || 'demo';
+  const isFirebaseMode = mode === 'firebase';
 
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [remain, setRemain] = useState(60);
   const [resending, setResending] = useState(false);
+  const [statusMsg, setStatusMsg] = useState('');   // inline status (not alert)
+  const [isFallback, setIsFallback] = useState(!isFirebaseMode);
+
   const submittedCodeRef = useRef(null);
   const verifyInFlight = useRef(false);
   const inputsRef = useRef([]);
-  const demoOtpRef = useRef(randomSixDigitOtp());
+  const demoOtpRef = useRef(routeDemoCode || randomSixDigitOtp());
   const digitsRef = useRef('');
-  const demoAuto = isClientDemoOtpEnabled();
+  const currentModeRef = useRef(mode);
 
-  useEffect(() => {
-    digitsRef.current = digits.join('');
-  }, [digits]);
+  useEffect(() => { digitsRef.current = digits.join(''); }, [digits]);
 
-  // Demo: after send-otp, animate digit-by-digit fill then auto-verify.
-  useEffect(() => {
-    if (!demoAuto) return undefined;
-    const code = demoOtpRef.current;
-    const timers: ReturnType<typeof setTimeout>[] = [];
+  // ── Auto-fill for demo/fallback mode ──────────────────────────────────────
+  const _startDemoAutofill = useCallback((code) => {
+    const timers = [];
     const t0 = setTimeout(() => {
       if (verifyInFlight.current || digitsRef.current.length > 0) return;
-      // Animate each digit with a small delay
       code.split('').forEach((d, i) => {
         const t = setTimeout(() => {
-          setDigits((prev) => {
-            const next = [...prev];
-            next[i] = d;
-            return next;
-          });
+          setDigits((prev) => { const next = [...prev]; next[i] = d; return next; });
         }, i * AUTOFILL_STEP_MS);
         timers.push(t);
       });
-      // After all digits filled, verify
       const tVerify = setTimeout(() => {
         if (verifyInFlight.current) return;
         submittedCodeRef.current = code;
         verifyWithCode(code);
       }, code.length * AUTOFILL_STEP_MS + 200);
       timers.push(tVerify);
-    }, SMS_AUTOFILL_MS);
-    return () => {
-      clearTimeout(t0);
-      timers.forEach(clearTimeout);
-    };
+    }, 2000);
+    return () => { clearTimeout(t0); timers.forEach(clearTimeout); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demoAuto]);
+  }, []);
+
+  useEffect(() => {
+    if (isFallback) {
+      return _startDemoAutofill(demoOtpRef.current);
+    }
+    return undefined;
+  }, [isFallback, _startDemoAutofill]);
 
   useEffect(() => {
     if (!isWeb) return undefined;
@@ -102,20 +93,21 @@ export default function OTPVerifyScreen({ navigation, route }) {
     return () => clearTimeout(id);
   }, [remain]);
 
+  // ── Core verify ───────────────────────────────────────────────────────────
   const verifyWithCode = useCallback(
     async (code) => {
       Keyboard.dismiss();
-      if (!phone) {
-        Alert.alert('Error', 'Missing phone number');
-        return;
-      }
+      if (!phone) { Alert.alert('Error', 'Missing phone number'); return; }
       if (code.length !== 6) return;
-
       if (verifyInFlight.current) return;
+
       verifyInFlight.current = true;
       setLoading(true);
+      setStatusMsg('Verifying…');
+
       try {
-        const data = await auth.verifyOTP(phone, code);
+        const data = await verifyOtp(phone, code, currentModeRef.current);
+
         await signIn({
           phone,
           access_token: data.access_token,
@@ -135,37 +127,44 @@ export default function OTPVerifyScreen({ navigation, route }) {
             navigation.replace('ProfileSetup');
             return;
           }
-          // profileReady true → RootNavigator swaps to MainTabs (no named route on this stack)
         } catch (e) {
           const status = e?.response?.status;
-          if (status === 401) {
-            await signOut();
-            navigation.replace('Onboarding');
-            return;
-          }
-          if (status === 404) {
-            dispatch({ type: 'SET_PROFILE_READY', ready: false });
-            navigation.replace('ProfileSetup');
-            return;
-          }
-          // If profile fetch fails transiently, keep signed-in users on dashboard path.
+          if (status === 401) { await signOut(); navigation.replace('Onboarding'); return; }
+          if (status === 404) { dispatch({ type: 'SET_PROFILE_READY', ready: false }); navigation.replace('ProfileSetup'); return; }
           dispatch({ type: 'SET_PROFILE_READY', ready: true });
-          return;
         }
       } catch (e) {
-        const msg = e?.response?.data?.detail;
-        Alert.alert('Invalid OTP', typeof msg === 'string' ? msg : e?.message || 'Verification failed');
+        const msg = e?.message || e?.response?.data?.detail;
+
+        // If Firebase verify failed for infra reasons, silently switch to demo
+        if (!msg || msg === 'firebase_timeout' || msg === 'no_confirmation_result') {
+          currentModeRef.current = 'demo';
+          setIsFallback(true);
+          setStatusMsg('Verification service starting… using instant demo access.');
+          submittedCodeRef.current = null;
+          setDigits(['', '', '', '', '', '']);
+          demoOtpRef.current = randomSixDigitOtp();
+          // Re-trigger demo autofill
+          return;
+        }
+
+        // User-facing errors (wrong code, expired, etc.)
+        setStatusMsg('');
+        Alert.alert('Verification failed', typeof msg === 'string' ? msg : 'Please try again.');
         submittedCodeRef.current = null;
         setDigits(['', '', '', '', '', '']);
         inputsRef.current[0]?.focus();
       } finally {
         verifyInFlight.current = false;
         setLoading(false);
+        if (statusMsg === 'Verifying…') setStatusMsg('');
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [phone, signIn, dispatch, navigation, signOut]
   );
 
+  // Auto-submit when 6 digits filled manually
   useEffect(() => {
     const code = digits.join('');
     if (code.length !== 6 || loading) return;
@@ -174,75 +173,62 @@ export default function OTPVerifyScreen({ navigation, route }) {
     verifyWithCode(code);
   }, [digits, loading, verifyWithCode]);
 
+  // ── Digit input handlers ──────────────────────────────────────────────────
   const onChangeDigit = (text, index) => {
     const cleaned = text.replace(/\D/g, '');
-    // Web: paste or IME can send several digits at once into one field
     if (cleaned.length > 1) {
       const chars = cleaned.slice(0, 6).split('');
       setDigits((prev) => {
         const next = [...prev];
-        for (let j = 0; j < chars.length && index + j < 6; j += 1) {
-          next[index + j] = chars[j];
-        }
+        for (let j = 0; j < chars.length && index + j < 6; j += 1) next[index + j] = chars[j];
         return next;
       });
-      const nextFocus = Math.min(index + chars.length, 5);
-      setTimeout(() => inputsRef.current[nextFocus]?.focus(), 0);
+      setTimeout(() => inputsRef.current[Math.min(index + chars.length, 5)]?.focus(), 0);
       return;
     }
     const d = cleaned.slice(-1);
-    setDigits((prev) => {
-      const next = [...prev];
-      next[index] = d;
-      return next;
-    });
-    if (d && index < 5) {
-      inputsRef.current[index + 1]?.focus();
-    }
+    setDigits((prev) => { const next = [...prev]; next[index] = d; return next; });
+    if (d && index < 5) inputsRef.current[index + 1]?.focus();
   };
 
   const onKeyPress = (e, index) => {
     const key = e?.nativeEvent?.key ?? '';
-    const isBackspace = key === 'Backspace' || key === 'Delete';
-    if (isBackspace && !digits[index] && index > 0) {
+    if ((key === 'Backspace' || key === 'Delete') && !digits[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }
   };
 
+  // ── Resend ────────────────────────────────────────────────────────────────
   const handleResend = async () => {
     if (remain > 0 || resending || !phone) return;
     setResending(true);
+    setStatusMsg('Sending…');
     try {
-      await auth.sendOTP(phone);
-      demoOtpRef.current = randomSixDigitOtp();
+      const result = await resendOtp(phone);
+      currentModeRef.current = result.mode;
+      const isDemo = result.mode === 'demo';
+      setIsFallback(isDemo);
+      if (isDemo && result.demoCode) demoOtpRef.current = result.demoCode;
       setRemain(60);
       submittedCodeRef.current = null;
       setDigits(['', '', '', '', '', '']);
-      if (demoAuto) {
-        const code = demoOtpRef.current;
-        const timers = [];
-        setTimeout(() => {
-          if (verifyInFlight.current || digitsRef.current.length > 0) return;
-          code.split('').forEach((d, i) => {
-            const t = setTimeout(() => {
-              setDigits((prev) => { const next = [...prev]; next[i] = d; return next; });
-            }, i * AUTOFILL_STEP_MS);
-            timers.push(t);
-          });
-          setTimeout(() => {
-            if (verifyInFlight.current) return;
-            submittedCodeRef.current = code;
-            verifyWithCode(code);
-          }, code.length * AUTOFILL_STEP_MS + 200);
-        }, SMS_AUTOFILL_MS);
-      }
+      setStatusMsg(isDemo ? 'Verification service starting… using instant demo access.' : 'Code sent — check your SMS');
+      setTimeout(() => setStatusMsg(''), 4000);
       if (isWeb) setTimeout(() => inputsRef.current[0]?.focus(), 0);
     } catch (e) {
-      Alert.alert('Error', e?.message || 'Could not resend OTP');
+      setStatusMsg('');
+      Alert.alert('Error', e?.message || 'Could not resend code');
     } finally {
       setResending(false);
     }
   };
+
+  // ── Subtitle text ─────────────────────────────────────────────────────────
+  const subtitleText = isFallback
+    ? 'Verification service starting… using instant demo access.'
+    : isWeb
+      ? 'Enter the 6-digit code from your SMS, or wait for auto-fill.'
+      : 'Enter the 6-digit code from your SMS.';
 
   const padStyle = [styles.container, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }];
 
@@ -251,21 +237,17 @@ export default function OTPVerifyScreen({ navigation, route }) {
       <Text style={styles.kicker}>Verification</Text>
       <Text style={styles.header}>+91 {phone || '—'}</Text>
       <Text style={styles.sub}>We sent a 6-digit code to this number</Text>
-      <Text style={styles.subMuted}>
-        {demoAuto
-          ? isWeb
-            ? 'Auto-fills a random code in ~2s, or type any 6 digits.'
-            : 'Auto-fills in ~2s, or enter any 6 digits below.'
-          : isWeb
-            ? 'Type or paste the 6-digit code from your SMS (check spam folder).'
-            : 'Enter the 6-digit code from your SMS.'}
-      </Text>
+      <Text style={styles.subMuted}>{subtitleText}</Text>
+
+      {statusMsg ? (
+        <View style={styles.statusBanner}>
+          <Text style={styles.statusText}>{statusMsg}</Text>
+        </View>
+      ) : null}
 
       {isWeb ? (
         <TextInput
-          ref={(el) => {
-            inputsRef.current[0] = el;
-          }}
+          ref={(el) => { inputsRef.current[0] = el; }}
           style={styles.webOtpInput}
           keyboardType="default"
           inputMode="numeric"
@@ -290,9 +272,7 @@ export default function OTPVerifyScreen({ navigation, route }) {
           {digits.map((d, i) => (
             <TextInput
               key={i}
-              ref={(el) => {
-                inputsRef.current[i] = el;
-              }}
+              ref={(el) => { inputsRef.current[i] = el; }}
               style={[styles.box, d ? styles.boxFilled : null]}
               keyboardType="number-pad"
               maxLength={1}
@@ -309,11 +289,13 @@ export default function OTPVerifyScreen({ navigation, route }) {
       )}
 
       <TouchableOpacity
-        style={[styles.btn, loading && styles.btnDisabled]}
+        style={[styles.btn, (loading || digits.join('').length !== 6) && styles.btnDisabled]}
         onPress={() => verifyWithCode(digits.join(''))}
         disabled={loading || digits.join('').length !== 6}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Verify & Login</Text>}
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.btnText}>Verify &amp; Login</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -321,11 +303,9 @@ export default function OTPVerifyScreen({ navigation, route }) {
         onPress={handleResend}
         disabled={remain > 0 || resending || loading}
       >
-        {remain > 0 ? (
-          <Text style={styles.resendMuted}>Resend code in {remain}s</Text>
-        ) : (
-          <Text style={styles.resendActive}>{resending ? 'Sending…' : 'Resend code'}</Text>
-        )}
+        {remain > 0
+          ? <Text style={styles.resendMuted}>Resend code in {remain}s</Text>
+          : <Text style={styles.resendActive}>{resending ? 'Sending…' : 'Resend code'}</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.back} onPress={() => navigation.replace('Onboarding')} disabled={loading}>
@@ -353,18 +333,20 @@ export default function OTPVerifyScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc', paddingHorizontal: 24 },
-  kicker: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: BRAND,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 8,
-  },
+  kicker: { fontSize: 12, fontWeight: '700', color: BRAND, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 8 },
   header: { fontSize: 28, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
-  demoHint: { marginTop: 8, fontSize: 13, color: BRAND, fontWeight: '700' },
   sub: { fontSize: 15, color: '#374151', marginTop: 10, fontWeight: '600', lineHeight: 22 },
-  subMuted: { fontSize: 14, color: '#6b7280', marginTop: 6, marginBottom: 24 },
+  subMuted: { fontSize: 14, color: '#6b7280', marginTop: 6, marginBottom: 16 },
+  statusBanner: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  statusText: { color: '#92400e', fontSize: 13, fontWeight: '600', textAlign: 'center' },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   box: {
     flex: 1,
@@ -405,10 +387,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 28,
     ...Platform.select({ web: { boxShadow: '0 8px 24px rgba(26,86,219,0.35)' }, default: {} }),
   },
-  btnDisabled: { opacity: 0.6 },
+  btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
   resendWrap: { marginTop: 22, alignItems: 'center' },
   resendMuted: { color: '#9ca3af', fontSize: 14 },

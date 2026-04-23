@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { auth, warmBackendOnce, formatApiError, isServerWaking } from '../services/api';
+import { warmBackendOnce, formatApiError, isServerWaking } from '../services/api';
+import { sendOtp } from '../services/authOtp';
 
 const BRAND = '#1A56DB';
 
@@ -51,15 +52,20 @@ export default function OnboardingScreen({ navigation }) {
     setLoading(true);
     setSentNotice('');
     try {
-      await auth.sendOTP(cleaned);
-      setSentNotice('Code sent — check your SMS');
-      await new Promise((r) => setTimeout(r, 1000));
-      navigation.navigate('OTPVerify', { phone: cleaned });
+      const result = await sendOtp(cleaned);
+      // Pass mode + demoCode (if demo) to OTPVerify screen
+      const params = { phone: cleaned, otpMode: result.mode };
+      if (result.mode === 'demo' && result.demoCode) {
+        params.demoCode = result.demoCode;
+      }
+      if (result.mode === 'firebase') {
+        setSentNotice('Code sent — check your SMS');
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      navigation.navigate('OTPVerify', params);
     } catch (e) {
-      Alert.alert(
-        'Could not send code',
-        formatApiError(e)
-      );
+      // Only surfaces user-friendly Firebase errors (e.g. invalid number)
+      Alert.alert('Could not send code', e?.message || formatApiError(e));
     } finally {
       setLoading(false);
       setSentNotice('');
