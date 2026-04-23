@@ -48,7 +48,7 @@ SafeNet detects it, validates it, and pays exactly what was lost.
 
 ## 💡 Why This Matters
 
-India has **15 million+ platform delivery workers** — Zomato, Swiggy, Zepto, Blinkit, Amazon. They earn per trip. Not per month. Not per hour. Per trip.
+India has millions of platform delivery workers** — Zomato, Swiggy, Zepto, Blinkit, Amazon. They earn per trip. Not per month. Not per hour. Per trip.
 
 **Ravi, 26, Hyderabad.** Thursday evening. Dinner rush. ₹58 an hour — his best window of the week. A flood alert fires at 8 PM. Roads underwater. Platform paused. Zero orders. Three hours of peak income. ₹174. Gone.
 
@@ -228,6 +228,7 @@ WebSocket push → worker app + admin dashboard
 Worker sees live on screen:
 ```
 🌧 Disruption Detected → 📍 Verifying Signals → 🛡 Fraud Check → ✅ Decision → ₹ Credited
+(Some Disruptions are shown in app, which are actually not there but to show how it will be when it happens )
 ```
 
 ---
