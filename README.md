@@ -153,6 +153,19 @@ Standard (75%): ₹58 × 3.0 × 0.75 × 0.875 = ₹114/week → actuarial break-
 Pro     (90%): ₹58 × 3.0 × 0.90 × 0.875 = ₹137/week → actuarial break-even ₹178 → priced ₹99
 ```
 
+### Disruption Severity Weight (DSW) — Confidence Engine Output
+
+| Signals Confirmed | Event Type | DSW | Example |
+|---|---|---|---|
+| 4 of 4 | Sustained major disruption | 1.0 | 6hr+ flood, all APIs confirm |
+| 3 of 4 | Moderate confirmed disruption | 0.8 | 3hr heavy rain, one API delayed |
+| 2 of 4 + behavioral | Short borderline disruption | 0.65 | Brief storm, partial offline |
+| Below threshold | Rejected | — | Claim blocked, not enough signal |
+
+DSW is computed by the Confidence Engine on every claim. It is never manually set.
+Workers cannot influence it. A higher trust score does not raise DSW — it only
+affects payout speed, not payout amount.
+
 ### Why Prices Are Below Break-Even — and Why That Is the Strategy
 
 Basic and Standard tiers are intentionally subsidised at launch. This is standard practice in parametric insurance market entry — IRDAI's sandbox framework explicitly accommodates below-break-even pricing during policyholder acquisition phases. The gap is not a mistake. It is the data flywheel.
@@ -264,7 +277,20 @@ Sunday   [  ░    ▒    ▓     █    █    ▒    ▒    ▓    ░  ]  ←
 ░ low   ▒ moderate   ▓ active   █ peak
 ```
 
-Flood hits at 8 PM Thursday → `₹58/hr × 3.0h × 0.8 = ₹139`. Not ₹500 for everyone. The exact amount Swamy lost.
+Flood hits at 8 PM Thursday →
+
+```
+Payout = DNA Rate × Hours Lost × Coverage % × Disruption Severity Weight (DSW)
+       = ₹58/hr  × 3.0h      × 0.90        × 0.8
+       = ₹139
+
+DNA Rate  : ₹58/hr — Swamy's personal Thursday 8PM rate from Earnings DNA
+Hours Lost: 3.0h   — disruption window confirmed by Confidence Engine
+Coverage %: 0.90   — Pro tier (90% of verified loss)
+DSW       : 0.8    — 3 of 4 cross-signals confirmed, moderate-heavy rain
+Weekly cap: ₹750   — Pro tier sum insured, not breached this week
+Result    : ₹139 credited. Not ₹500 for everyone. The exact amount Swamy lost.
+```
 
 After 90 days, Swamy's DNA also tells the insurer that his peak exposure window is Thursday–Sunday evenings — precisely monsoon flood hours. His renewal premium reflects that risk. A worker whose peak hours are 10 AM–2 PM gets a lower renewal rate. This is per-worker actuarial pricing at a granularity no traditional insurer has ever operated.
 
@@ -396,7 +422,7 @@ scikit-learn DBSCAN runs on worker GPS + offline timestamps every 60 seconds. Wh
 | Real-time | WebSockets (FastAPI native), APScheduler background jobs |
 | Security | JWT, SHA-256 identity, device fingerprinting, HMAC, rate limiting |
 | Location | Nominatim / OSM (search + geocode), expo-location (GPS), Haversine (zone match) |
-| External APIs | OpenWeatherMap (live + 48h forecast), OpenAQ (AQI), Razorpay (test mode) |
+| External APIs | OpenWeatherMap (live + 48h forecast), OpenAQ (AQI), Nominatim / OSM, Razorpay (test) |
 | PDF | fpdf2 — claim receipts with formula, API sources, full audit trail |
 | i18n | LocalizationContext + en.json, hi.json, te.json — no external API |
 | Deployment | Render (backend + PostgreSQL), Vercel (admin + worker web) |
